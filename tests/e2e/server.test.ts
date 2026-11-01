@@ -324,3 +324,43 @@ describe('註冊限制', () => {
     expect((await c.post('/register/', { ...body(code), username: 'another' })).status).toBe(400);
   });
 });
+
+describe('開放收錄（NOINDEX=false）時私人頁面仍不收錄', () => {
+  let s2: ChildProcess;
+  let b2 = '';
+  const tmp2 = makeDataDir();
+  beforeAll(async () => {
+    const port = await freePort();
+    b2 = `http://localhost:${port}`;
+    s2 = spawn(process.execPath, ['dist/server/entry.mjs'], {
+      env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), DATA_DIR: tmp2.dir, NOINDEX: 'false' },
+      stdio: 'pipe',
+    });
+    for (let i = 0; i < 100; i++) {
+      try {
+        if ((await fetch(b2 + '/robots.txt')).ok) return;
+      } catch {}
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error('第二個伺服器沒有啟動');
+  }, 30_000);
+  afterAll(() => {
+    s2?.kill();
+    setTimeout(() => tmp2.cleanup(), 300);
+  });
+
+  it('公開頁面可收錄，登入／註冊頁帶 noindex，robots.txt 排除私人路徑', async () => {
+    const home = await fetch(b2 + '/');
+    expect(home.headers.get('x-robots-tag')).toBeNull();
+    expect(await home.text()).not.toMatch(/name="robots"/);
+    for (const p of ['/login/', '/register/']) {
+      const res = await fetch(b2 + p);
+      expect(res.headers.get('x-robots-tag'), p).toContain('noindex');
+      expect(await res.text(), p).toMatch(/<meta name="robots" content="noindex/);
+    }
+    expect((await fetch(b2 + '/studio/', { redirect: 'manual' })).headers.get('x-robots-tag')).toContain('noindex');
+    const robots = await (await fetch(b2 + '/robots.txt')).text();
+    expect(robots).toContain('Allow: /');
+    for (const p of ['/studio/', '/login/', '/register/']) expect(robots).toContain('Disallow: ' + p);
+  });
+});
