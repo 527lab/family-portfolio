@@ -55,7 +55,7 @@ npm run user -- create-admin admin 管理員
 | 變數 | 預設 | 說明 |
 |---|---|---|
 | `REGISTRATION` | `invite` | `closed` 關閉註冊／`invite` 需邀請碼／`approval` 需管理員核准 |
-| `NOINDEX` | `true` | 不讓搜尋引擎收錄；改 `false` 並重啟才允許 |
+| `NOINDEX` | `true` | 不讓搜尋引擎收錄；改 `false` 並重啟才允許（後台、登入、註冊頁仍不收錄）|
 | `SITE_URL` | `http://localhost:8080` | 對外網址；**建置時**帶入，改了要重新 build |
 | `MAX_IMAGE_MB` / `MAX_VIDEO_MB` | `15` / `200` | 上傳大小上限 |
 | `TRUST_PROXY` | `false` | 經 Cloudflare Tunnel 時設 `true`，登入限流才抓得到真實 IP |

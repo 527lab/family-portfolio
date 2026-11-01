@@ -119,6 +119,7 @@
 由環境變數 `NOINDEX` 控制（預設 `true`），**執行期讀取**，改 `.env` 後 `docker compose up -d` 重啟即可，不必重建：
 - 每頁加上 `<meta name="robots" content="noindex, nofollow, noarchive">`
 - `/robots.txt` 輸出 `Disallow: /`
+- 改成 `false`（開放收錄）後，`/studio/`、`/login/`、`/register/`、`/logout/` 仍一律 noindex（HTML meta、`X-Robots-Tag`、nginx 標頭、robots.txt 皆然）
 
 robots.txt 與 noindex 只是「請搜尋引擎不要收錄」，不是存取控制。公開作品網址知道就能看；若需限制，可在 Cloudflare Zero Trust 對網域加 Access 規則（Email 一次性密碼），此為後續選項。
 
