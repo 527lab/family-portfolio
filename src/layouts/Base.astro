@@ -2,12 +2,13 @@
 import { site, siteTitle } from '../data/site';
 import { getSiteOwnerName } from '../server/auth';
 import '../styles/global.css';
-interface Props { title?: string; description?: string }
-const { title, description = site.tagline } = Astro.props;
+interface Props { title?: string; description?: string; image?: string | null }
+const { title, description = site.tagline, image } = Astro.props;
 const owner = getSiteOwnerName();
 const fullTitle = title ? `${title}｜${siteTitle(owner)}` : siteTitle(owner);
 const path = Astro.url.pathname;
 const user = Astro.locals.user;
+const ogImage = image ? new URL(image, Astro.url).href : undefined;
 ---
 <!doctype html>
 <html lang="zh-Hant">
@@ -16,6 +17,13 @@ const user = Astro.locals.user;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_TW" />
+    <meta property="og:site_name" content={siteTitle(owner)} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
     {site.noindex && <meta name="robots" content="noindex, nofollow, noarchive" />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   </head>
