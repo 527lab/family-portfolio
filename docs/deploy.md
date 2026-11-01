@@ -146,6 +146,10 @@ tar tzf portfolio-日期.tgz | head     # 應該看得到資料庫檔與 uploads
 | 想確認沒被搜尋引擎收錄 | `curl -I http://localhost:8080/` 應看到 `X-Robots-Tag: noindex, nofollow, noarchive` |
 | 磁碟空間不足 | `docker system df`；上傳檔在 volume 內，需要時再擴充磁碟 |
 
+## 驗證部署（自動化）
+
+CI 的 `docker` job 會自動驗證映像能建置、compose 能啟動，並檢查 X-Robots-Tag、Range 206、413；細節見 README 的「CI」。自己的機器上要複查，可執行 `bash scripts/ci-smoke.sh`（僅限拋棄式環境，會建立測試帳號）。
+
 ## 五、安全提醒
 
 - `.env`、Tunnel token、備份檔**絕對不要**提交到 git（已在 `.gitignore`）。token 外洩時，到 Cloudflare Tunnel 頁面 **Refresh token** 即可作廢舊的。
