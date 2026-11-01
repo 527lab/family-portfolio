@@ -1,0 +1,46 @@
+---
+import Base from '../../../layouts/Base.astro';
+import WorkForm from '../../../components/WorkForm.astro';
+import { canManage, deleteWork, getWork } from '../../../server/works';
+import { removeFiles } from '../../../server/media';
+import { submitWork, bodyTooLarge } from '../../../server/workForm';
+import { textValues } from '../../../server/formValues';
+
+const user = Astro.locals.user!;
+const work = getWork(Number(Astro.params.id));
+// 不是自己的作品一律回 404（不透露它存不存在）
+if (!work || !canManage(user, work)) return new Response('找不到作品', { status: 404 });
+
+let errors: string[] = [];
+let values: Record<string, string> = {};
+if (Astro.request.method === 'POST') {
+  if (bodyTooLarge(Astro.request)) return new Response('檔案太大', { status: 413 });
+  const form = await Astro.request.formData();
+  if (form.get('action') === 'delete') {
+    if (form.get('confirm') === 'yes') {
+      await removeFiles(deleteWork(user, work.id));
+      return Astro.redirect('/studio/?ok=deleted', 303);
+    }
+    errors = ['請勾選「確定要刪除」'];
+  } else {
+    values = textValues(form);
+    const r = await submitWork(user, form, work);
+    if (r.work) return Astro.redirect('/studio/?ok=saved', 303);
+    errors = r.errors;
+  }
+  Astro.response.status = 400;
+}
+---
+<Base title={`編輯：${work.title}`}>
+  <p><a href="/studio/">← 回到我的作品</a> ・ <a href={`/works/${work.id}/`}>預覽頁面</a></p>
+  <h1>編輯作品</h1>
+  <WorkForm work={work} values={values} errors={errors} />
+  <details class="danger">
+    <summary>刪除這件作品</summary>
+    <form method="post">
+      <input type="hidden" name="action" value="delete" />
+      <label class="inline"><input type="checkbox" name="confirm" value="yes" /> 確定要刪除（圖片與影片檔會一併刪除，無法復原）</label>
+      <button type="submit">刪除</button>
+    </form>
+  </details>
+</Base>

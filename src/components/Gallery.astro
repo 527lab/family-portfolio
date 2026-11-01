@@ -1,7 +1,7 @@
 ---
-import type { CollectionEntry } from 'astro:content';
+import type { Work } from '../server/works';
 import WorkCard from './WorkCard.astro';
-interface Props { works: CollectionEntry<'works'>[] }
+interface Props { works: Work[] }
 const { works } = Astro.props;
 ---
 {works.length === 0 ? <p>作品整理中，敬請期待。</p> : <div class="grid">{works.map((w) => <WorkCard work={w} />)}</div>}

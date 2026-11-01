@@ -2,9 +2,8 @@
 import Base from '../layouts/Base.astro';
 import Gallery from '../components/Gallery.astro';
 import { site } from '../data/site';
-import { getWorks } from '../lib';
-const all = await getWorks();
-const featured = all.filter((w) => w.data.featured);
+import { listPublic } from '../server/works';
+const featured = listPublic({ featured: true });
 ---
 <Base>
   <section class="hero">

@@ -1,9 +1,9 @@
 ---
 import Base from '../layouts/Base.astro';
 import Gallery from '../components/Gallery.astro';
-import { getWorks } from '../lib';
-const perf = await getWorks('piano');
-const certs = await getWorks('certificate');
+import { listPublic } from '../server/works';
+const perf = listPublic({ categories: ['piano'] });
+const certs = listPublic({ categories: ['certificate'] });
 ---
 <Base title="鋼琴">
   <h1>鋼琴</h1>

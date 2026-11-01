@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Gallery from '../components/Gallery.astro';
 import { categoryInfo } from '../data/site';
-import { getWorks } from '../lib';
-const works = await getWorks('painting');
+import { listPublic } from '../server/works';
+const works = listPublic({ categories: ['painting'] });
 ---
-<Base title="畫作"><h1>畫作</h1><p>{categoryInfo.painting.intro}</p><Gallery works={works} /></Base>
+<Base title={categoryInfo.painting.label}><h1>{categoryInfo.painting.label}</h1><p>{categoryInfo.painting.intro}</p><Gallery works={works} /></Base>

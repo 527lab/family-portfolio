@@ -3,16 +3,24 @@ services:
     build:
       context: .
       args:
-        NOINDEX: ${NOINDEX:-true}
         SITE_URL: ${SITE_URL:-http://localhost:8080}
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:80"   # 只開本機，對外一律走 Cloudflare Tunnel
+      - "127.0.0.1:8080:4321"   # 只開本機，對外一律走 Cloudflare Tunnel
+    environment:
+      NOINDEX: ${NOINDEX:-true}
+      SITE_URL: ${SITE_URL:-http://localhost:8080}
+      REGISTRATION: ${REGISTRATION:-invite}   # closed | invite | approval
+      MAX_IMAGE_MB: ${MAX_IMAGE_MB:-15}
+      MAX_VIDEO_MB: ${MAX_VIDEO_MB:-200}
+      TRUST_PROXY: ${TRUST_PROXY:-false}      # 經 Cloudflare Tunnel 時設 true（登入限流才抓得到真實 IP）
     volumes:
-      - ./media/videos:/usr/share/nginx/html/videos:ro   # 自架影片放 ./media/videos
+      - portfolio-data:/data    # SQLite 資料庫 + 上傳的圖片／影片
+    # 上傳影片時容器會暫用記憶體，視伺服器調整
+    mem_limit: 1g
 
   # Cloudflare Tunnel：token 從 .env 讀取（不進版控）
-  # 用 `docker compose --profile tunnel up -d` 啟動；Tunnel 的 Public Hostname 服務填 http://web:80
+  # 用 `docker compose --profile tunnel up -d` 啟動；Tunnel 的 Public Hostname 服務填 http://web:4321
   cloudflared:
     image: cloudflare/cloudflared:latest
     profiles: ["tunnel"]
@@ -22,3 +30,6 @@ services:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:?請在 .env 設定 TUNNEL_TOKEN}
     depends_on:
       - web
+
+volumes:
+  portfolio-data:

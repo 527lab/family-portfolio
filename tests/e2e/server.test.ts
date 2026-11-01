@@ -1,0 +1,258 @@
+// 端對端測試：啟動真正 build 出來的伺服器（dist/server/entry.mjs），用 HTTP 驗證登入與權限。
+// 先執行 `npm run build:fast`，再 `npm run test:e2e`。
+import { spawn, type ChildProcess } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { createServer } from 'node:net';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { makeDataDir, mp4Bytes, PASSWORD, pngFile } from '../helpers';
+
+const tmp = makeDataDir();
+process.env.DATA_DIR = tmp.dir;
+process.env.REGISTRATION = 'invite';
+let server: ChildProcess;
+let base = '';
+
+async function freePort() {
+  return new Promise<number>((resolve) => {
+    const s = createServer().listen(0, '127.0.0.1', () => {
+      const p = (s.address() as any).port;
+      s.close(() => resolve(p));
+    });
+  });
+}
+
+// 簡單的 cookie 罐：一個「瀏覽器」
+class Client {
+  cookie = '';
+  async req(path: string, init: RequestInit & { origin?: string | null } = {}) {
+    const headers = new Headers(init.headers);
+    if (this.cookie) headers.set('cookie', this.cookie);
+    if (init.origin !== null && init.method && init.method !== 'GET') headers.set('origin', init.origin ?? base);
+    const res = await fetch(base + path, { ...init, headers, redirect: 'manual' });
+    const set = res.headers.getSetCookie().find((c) => c.startsWith('sid='));
+    if (set) this.cookie = set.startsWith('sid=;') || /expires=Thu, 01 Jan 1970/i.test(set) ? '' : set.split(';')[0];
+    return res;
+  }
+  post(path: string, body: Record<string, string | File>, opts: { origin?: string | null } = {}) {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(body)) f.set(k, v);
+    return this.req(path, { method: 'POST', body: f, ...opts });
+  }
+  async login(username: string, password = PASSWORD) {
+    return this.post('/login/', { username, password });
+  }
+}
+
+let auth: typeof import('../../src/server/auth.ts');
+let works: typeof import('../../src/server/works.ts');
+let dbm: typeof import('../../src/server/db.ts');
+
+beforeAll(async () => {
+  if (!existsSync('dist/server/entry.mjs')) throw new Error('請先執行 npm run build:fast');
+  auth = await import('../../src/server/auth.ts');
+  works = await import('../../src/server/works.ts');
+  dbm = await import('../../src/server/db.ts');
+  const admin = await auth.createUser({ username: 'boss', displayName: '管理員', password: PASSWORD, role: 'admin', status: 'active' });
+  const mk = (username: string) => auth.createUser({ username, displayName: username, password: PASSWORD, role: 'creator', status: 'active' });
+  await mk('alice');
+  await mk('bobby');
+  void admin;
+  const port = await freePort();
+  base = `http://localhost:${port}`; // 用 localhost：以 127.0.0.1 連線時 Astro 算出的網址來源是 localhost，Origin 檢查會不符
+  server = spawn(process.execPath, ['dist/server/entry.mjs'], {
+    env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), DATA_DIR: tmp.dir, REGISTRATION: 'invite' },
+    stdio: 'pipe',
+  });
+  let log = '';
+  server.stderr?.on('data', (d) => (log += d));
+  for (let i = 0; i < 100; i++) {
+    try {
+      if ((await fetch(base + '/robots.txt')).ok) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('伺服器沒有啟動：' + log);
+}, 30_000);
+
+afterAll(() => {
+  server?.kill();
+  dbm?.closeDb();
+  setTimeout(() => tmp.cleanup(), 300);
+});
+
+const workBody = async (over: Record<string, string | File> = {}) => ({
+  category: 'painting', title: '日落', date: '2025-05-01', alt: '日落的畫', status: 'published', image: await pngFile(), ...over,
+});
+
+describe('未登入', () => {
+  it('不能進後台：被導向登入頁', async () => {
+    const c = new Client();
+    for (const p of ['/studio/', '/studio/new/', '/studio/works/1/', '/studio/admin/']) {
+      const res = await c.req(p);
+      expect(res.status, p).toBe(303);
+      expect(res.headers.get('location')).toMatch(/^\/login\//);
+    }
+  });
+
+  it('不能上傳：POST 被導向登入頁，沒有建立作品也沒有寫入檔案', async () => {
+    const c = new Client();
+    const res = await c.post('/studio/new/', await workBody());
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toMatch(/^\/login\//);
+    expect(works.listForStudio({ id: 0, role: 'admin' } as any)).toHaveLength(0);
+    expect(existsSync(tmp.dir + '/uploads')).toBe(false);
+  });
+
+  it('不能改別人的作品或移動排序（POST /studio/）', async () => {
+    const res = await new Client().post('/studio/', { id: '1', dir: 'up' });
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toMatch(/^\/login\//);
+  });
+
+  it('訪客可以瀏覽公開頁面與 robots.txt', async () => {
+    const c = new Client();
+    for (const p of ['/', '/about/', '/painting/', '/photography/', '/piano/', '/login/', '/register/']) {
+      expect((await c.req(p)).status, p).toBe(200);
+    }
+    expect(await (await c.req('/robots.txt')).text()).toContain('Disallow: /');
+  });
+});
+
+describe('登入', () => {
+  it('密碼錯誤：401，且不發 session cookie', async () => {
+    const c = new Client();
+    const res = await c.login('alice', 'wrong-password-123');
+    expect(res.status).toBe(401);
+    expect(res.headers.getSetCookie().some((x) => x.startsWith('sid='))).toBe(false);
+  });
+
+  it('密碼正確：session cookie 為 HttpOnly、SameSite=Lax，之後可進後台', async () => {
+    auth.resetRateLimit();
+    const c = new Client();
+    const res = await c.login('alice');
+    expect(res.status).toBe(303);
+    const cookie = res.headers.getSetCookie().find((x) => x.startsWith('sid='))!;
+    expect(cookie).toMatch(/HttpOnly/i);
+    expect(cookie).toMatch(/SameSite=Lax/i);
+    expect(cookie).toMatch(/Path=\//i);
+    expect((await c.req('/studio/')).status).toBe(200);
+  });
+
+  it('登出後 session 失效', async () => {
+    const c = new Client();
+    await c.login('alice');
+    const old = c.cookie;
+    expect((await c.post('/logout', {})).status).toBe(303);
+    const replay = await fetch(base + '/studio/', { headers: { cookie: old }, redirect: 'manual' });
+    expect(replay.status).toBe(303);
+  });
+
+  it('跨站來源的 POST 被擋（CSRF）', async () => {
+    const c = new Client();
+    await c.login('alice');
+    const res = await c.post('/studio/new/', await workBody(), { origin: 'https://evil.example' });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('創作者上傳與權限', () => {
+  let alice: Client, bobby: Client, boss: Client;
+  let draftId = 0;
+  beforeAll(async () => {
+    auth.resetRateLimit();
+    alice = new Client();
+    bobby = new Client();
+    boss = new Client();
+    await alice.login('alice');
+    await bobby.login('bobby');
+    await boss.login('boss');
+  });
+
+  it('上傳圖片並公開：出現在公開頁，縮圖與大圖可讀', async () => {
+    const res = await alice.post('/studio/new/', await workBody({ title: '公開的畫' }));
+    expect(res.status).toBe(303);
+    const [w] = works.listPublic();
+    expect(w.title).toBe('公開的畫');
+    expect(await (await fetch(base + '/painting/')).text()).toContain('公開的畫');
+    const thumb = await fetch(`${base}/media/thumbs/${w.thumbFile}`);
+    expect(thumb.status).toBe(200);
+    expect(thumb.headers.get('content-type')).toBe('image/webp');
+    expect((await fetch(`${base}/media/images/${w.imageFile}`)).status).toBe(200);
+  });
+
+  it('草稿：訪客與其他創作者看不到頁面和檔案，作者與管理員可以', async () => {
+    const res = await alice.post('/studio/new/', await workBody({ title: '私密草稿', status: 'draft' }));
+    expect(res.status).toBe(303);
+    const draft = works.listForStudio({ id: 0, role: 'admin' } as any).find((w) => w.title === '私密草稿')!;
+    draftId = draft.id;
+    expect(await (await fetch(base + '/painting/')).text()).not.toContain('私密草稿');
+    expect((await fetch(`${base}/works/${draft.id}/`)).status).toBe(404);
+    expect((await fetch(`${base}/media/images/${draft.imageFile}`)).status).toBe(404);
+    expect((await bobby.req(`/media/images/${draft.imageFile}`)).status).toBe(404);
+    expect((await alice.req(`/media/images/${draft.imageFile}`)).status).toBe(200);
+    expect((await alice.req(`/works/${draft.id}/`)).status).toBe(200);
+    expect((await boss.req(`/works/${draft.id}/`)).status).toBe(200);
+  });
+
+  it('其他創作者不能開啟、修改、刪除、移動別人的作品', async () => {
+    expect((await bobby.req(`/studio/works/${draftId}/`)).status).toBe(404);
+    expect((await bobby.post(`/studio/works/${draftId}/`, { title: '被竄改', category: 'painting', date: '2025-01-01' })).status).toBe(404);
+    expect((await bobby.post(`/studio/works/${draftId}/`, { action: 'delete', confirm: 'yes' })).status).toBe(404);
+    expect((await bobby.post('/studio/', { id: String(draftId), dir: 'up' })).status).toBe(403);
+    expect(works.getWork(draftId)?.title).toBe('私密草稿');
+  });
+
+  it('作者能編輯，管理員也能刪除', async () => {
+    const edit = await alice.post(`/studio/works/${draftId}/`, { title: '改好了', category: 'painting', date: '2025-05-01', alt: '畫', status: 'draft', video_mode: 'keep' });
+    expect(edit.status).toBe(303);
+    expect(works.getWork(draftId)?.title).toBe('改好了');
+    const del = await boss.post(`/studio/works/${draftId}/`, { action: 'delete', confirm: 'yes' });
+    expect(del.status).toBe(303);
+    expect(works.getWork(draftId)).toBeNull();
+  });
+
+  it('偽裝成圖片的檔案被拒絕（400），不建立作品', async () => {
+    const before = works.listForStudio({ id: 0, role: 'admin' } as any).length;
+    const evil = new File(['<?php system($_GET["c"]); ?>'], 'shell.png', { type: 'image/png' });
+    const res = await alice.post('/studio/new/', await workBody({ image: evil, title: '惡意' }));
+    expect(res.status).toBe(400);
+    expect(works.listForStudio({ id: 0, role: 'admin' } as any)).toHaveLength(before);
+  });
+
+  it('鋼琴影片：可上傳 MP4，支援 Range；也可貼 YouTube 連結', async () => {
+    const res = await alice.post('/studio/new/', {
+      category: 'piano', title: '發表會', date: '2025-06-01', status: 'published', video_mode: 'file',
+      video: new File([mp4Bytes()], 'v.mp4', { type: 'video/mp4' }),
+    });
+    expect(res.status).toBe(303);
+    const w = works.listPublic({ categories: ['piano'] })[0];
+    const part = await fetch(`${base}/media/videos/${w.videoFile}`, { headers: { range: 'bytes=0-3' } });
+    expect(part.status).toBe(206);
+    expect(part.headers.get('content-range')).toMatch(/^bytes 0-3\/20$/);
+
+    const yt = await alice.post('/studio/new/', {
+      category: 'piano', title: 'YouTube 版', date: '2025-06-02', status: 'published', video_mode: 'youtube', youtube: 'https://youtu.be/abcdEFGhijk',
+    });
+    expect(yt.status).toBe(303);
+    const page = await (await fetch(`${base}/works/${works.listPublic({ categories: ['piano'] })[0].id}/`)).text();
+    expect(page).toContain('youtube-nocookie.com/embed/abcdEFGhijk');
+  });
+
+  it('創作者不能進帳號管理頁，管理員可以', async () => {
+    expect((await alice.req('/studio/admin/')).status).toBe(403);
+    expect((await boss.req('/studio/admin/')).status).toBe(200);
+  });
+});
+
+describe('註冊限制', () => {
+  it('沒有邀請碼不能註冊；有邀請碼可註冊一次，且不能自己變成管理員', async () => {
+    const c = new Client();
+    const body = (invite: string) => ({ invite, username: 'newkid', display_name: '新朋友', password: PASSWORD, password2: PASSWORD, role: 'admin' });
+    expect((await c.post('/register/', body('nope'))).status).toBe(400);
+    const boss = auth.getUserByName('boss')!;
+    const code = auth.createInvite(boss);
+    expect((await c.post('/register/', body(code))).status).toBe(200);
+    expect(auth.getUserByName('newkid')?.role).toBe('creator');
+    expect((await c.post('/register/', { ...body(code), username: 'another' })).status).toBe(400);
+  });
+});

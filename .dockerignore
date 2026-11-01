@@ -5,7 +5,7 @@ dist
 .agents
 .env
 .env.*
-public/videos/*
-!public/videos/.gitkeep
+!.env.example
+data
+tests
 docs
-media

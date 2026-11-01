@@ -1,15 +1,15 @@
 ---
-import { Image } from 'astro:assets';
-import type { CollectionEntry } from 'astro:content';
-interface Props { work: CollectionEntry<'works'> }
+import type { Work } from '../server/works';
+interface Props { work: Work }
 const { work } = Astro.props;
-const d = work.data;
 ---
 <a class="card" href={`/works/${work.id}/`}>
-  <Image src={d.cover} alt={d.coverAlt} widths={[400, 800]} sizes="(min-width: 700px) 33vw, 100vw" loading="lazy" />
+  {work.thumbFile
+    ? <img src={`/media/thumbs/${work.thumbFile}`} alt={work.alt} loading="lazy" />
+    : <div class="card-ph" aria-hidden="true">{work.category === 'piano' ? '🎹' : '🖼️'}</div>}
   <div class="card-body">
-    <h3>{d.title}</h3>
-    <p class="meta">{d.date.getFullYear()} 年{d.result ? `・${d.result}` : ''}</p>
-    {d.summary && <p>{d.summary}</p>}
+    <h3>{work.title}</h3>
+    <p class="meta">{work.date.slice(0, 4)} 年{work.result ? `・${work.result}` : ''}</p>
+    {work.summary && <p>{work.summary}</p>}
   </div>
 </a>

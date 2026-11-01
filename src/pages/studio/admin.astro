@@ -1,0 +1,66 @@
+---
+import Base from '../../layouts/Base.astro';
+import { AuthError, createInvite, listInvites, listUsers, setUserStatus, type Status } from '../../server/auth';
+import { config } from '../../server/config';
+
+const admin = Astro.locals.user!;
+let code = '';
+let error = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  try {
+    if (form.get('action') === 'invite') code = createInvite(admin);
+    else if (form.get('action') === 'status') {
+      const status = String(form.get('status')) as Status;
+      if (!['active', 'disabled'].includes(status)) throw new AuthError('狀態不正確');
+      setUserStatus(admin, Number(form.get('id')), status);
+    }
+  } catch (e) {
+    if (!(e instanceof AuthError)) throw e;
+    error = e.message;
+  }
+}
+const users = listUsers();
+const invites = listInvites();
+const mode = config().registration;
+const modeLabel = { closed: '關閉', invite: '需邀請碼', approval: '需管理員核准' }[mode];
+const fmt = (t: number) => new Date(t).toLocaleString('zh-TW', { hour12: false });
+const label: Record<Status, string> = { active: '啟用', pending: '待核准', disabled: '已停用' };
+---
+<Base title="帳號管理">
+  <p><a href="/studio/">← 回到我的作品</a></p>
+  <h1>帳號管理</h1>
+  <p>註冊模式：<strong>{modeLabel}</strong>（由環境變數 <code>REGISTRATION</code> 設定）</p>
+  {error && <p class="error" role="alert">{error}</p>}
+
+  <h2>邀請碼</h2>
+  <form method="post"><input type="hidden" name="action" value="invite" /><button type="submit">產生新的邀請碼（7 天內有效、限用一次）</button></form>
+  {code && <p class="ok">新邀請碼：<code class="code">{code}</code><br /><small>只會顯示這一次，請現在複製給家人。</small></p>}
+  <table>
+    <thead><tr><th>建立時間</th><th>到期</th><th>狀態</th></tr></thead>
+    <tbody>
+      {invites.map((i) => <tr><td>{fmt(i.created_at)}</td><td>{fmt(i.expires_at)}</td><td>{i.used_by ? `已被 ${i.used_by_name ?? '（已刪除帳號）'} 使用` : i.expires_at < Date.now() ? '已過期' : '未使用'}</td></tr>)}
+    </tbody>
+  </table>
+
+  <h2>帳號</h2>
+  <table>
+    <thead><tr><th>帳號</th><th>顯示名稱</th><th>角色</th><th>狀態</th><th></th></tr></thead>
+    <tbody>
+      {users.map((u) => (
+        <tr>
+          <td>{u.username}</td><td>{u.displayName}</td><td>{u.role === 'admin' ? '管理員' : '創作者'}</td><td>{label[u.status]}</td>
+          <td>
+            {u.id !== admin.id && (
+              <form method="post" class="inline-form">
+                <input type="hidden" name="action" value="status" /><input type="hidden" name="id" value={u.id} />
+                {u.status !== 'active' && <button name="status" value="active">{u.status === 'pending' ? '核准' : '啟用'}</button>}
+                {u.status !== 'disabled' && <button name="status" value="disabled">停用</button>}
+              </form>
+            )}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</Base>
