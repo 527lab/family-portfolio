@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: build + 單元 + e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # .nvmrc = 24，符合 spec §2（Node >= 22.23.4）
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build（含 astro check）
+        run: npm run build
+      - name: 單元測試
+        run: npm test
+      # 本專案的 e2e 是 vitest 啟動真實伺服器，不用瀏覽器，所以不需要安裝 Playwright
+      - name: 端對端測試
+        run: npm run test:e2e
+
+  docker:
+    name: Docker 建置與 compose 煙霧測試
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # 全部是假值，CI 不使用任何真實 token
+      MAX_VIDEO_MB: "1"
+      NOINDEX: "true"
+      SITE_URL: http://localhost:8080
+      TUNNEL_TOKEN: ""
+    steps:
+      - uses: actions/checkout@v7
+      - name: docker compose config
+        run: docker compose config --quiet
+      - name: docker build
+        run: docker build --build-arg SITE_URL=http://localhost:8080 -t family-portfolio:ci .
+      - name: 啟動 compose（web + nginx）
+        run: docker compose up -d --build --wait --wait-timeout 180
+      - name: 驗證 X-Robots-Tag、Range 206、413
+        run: ./scripts/ci-smoke.sh
+      - name: 失敗時列出容器記錄
+        if: failure()
+        run: docker compose logs --no-color
+      - name: 清理
+        if: always()
+        run: docker compose down -v
