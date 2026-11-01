@@ -1,0 +1,15 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+interface Props { work: CollectionEntry<'works'> }
+const { work } = Astro.props;
+const d = work.data;
+---
+<a class="card" href={`/works/${work.id}/`}>
+  <Image src={d.cover} alt={d.coverAlt} widths={[400, 800]} sizes="(min-width: 700px) 33vw, 100vw" loading="lazy" />
+  <div class="card-body">
+    <h3>{d.title}</h3>
+    <p class="meta">{d.date.getFullYear()} 年{d.result ? `・${d.result}` : ''}</p>
+    {d.summary && <p>{d.summary}</p>}
+  </div>
+</a>

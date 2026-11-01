@@ -1,0 +1,24 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        NOINDEX: ${NOINDEX:-true}
+        SITE_URL: ${SITE_URL:-http://localhost:8080}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"   # 只開本機，對外一律走 Cloudflare Tunnel
+    volumes:
+      - ./media/videos:/usr/share/nginx/html/videos:ro   # 自架影片放 ./media/videos
+
+  # Cloudflare Tunnel：token 從 .env 讀取（不進版控）
+  # 用 `docker compose --profile tunnel up -d` 啟動；Tunnel 的 Public Hostname 服務填 http://web:80
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?請在 .env 設定 TUNNEL_TOKEN}
+    depends_on:
+      - web

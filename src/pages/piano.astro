@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import Gallery from '../components/Gallery.astro';
+import { getWorks } from '../lib';
+const perf = await getWorks('piano');
+const certs = await getWorks('certificate');
+---
+<Base title="鋼琴">
+  <h1>鋼琴</h1>
+  <h2>演奏影片</h2>
+  <Gallery works={perf} />
+  <h2>檢定證書</h2>
+  <Gallery works={certs} />
+</Base>
