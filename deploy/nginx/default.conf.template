@@ -26,6 +26,8 @@ server {
 
     location / {
         proxy_pass http://web:4321;
+        # 網站也會送 X-Robots-Tag；以 nginx 為準，避免重複標頭
+        proxy_hide_header X-Robots-Tag;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -44,6 +46,8 @@ server {
     # 圖片與影片：不緩衝，讓影片可以邊下載邊播；Range 與 If-Range 轉給網站處理（拖曳進度條、手機播放需要）
     location /media/ {
         proxy_pass http://web:4321;
+        # 網站也會送 X-Robots-Tag；以 nginx 為準，避免重複標頭
+        proxy_hide_header X-Robots-Tag;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
