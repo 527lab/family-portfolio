@@ -53,6 +53,15 @@ jobs:
         run: docker compose up -d --build --wait --wait-timeout 180
       - name: 驗證 X-Robots-Tag、Range 206、413
         run: bash scripts/ci-smoke.sh
+      - name: 開放收錄（NOINDEX=false）時，私人頁面仍帶 noindex
+        env:
+          NOINDEX: "false"
+        run: |
+          docker compose up -d --wait --wait-timeout 180
+          ! curl -sSI http://localhost:8080/ | grep -i '^x-robots-tag'
+          for p in /login/ /register/ /studio/ /logout; do
+            curl -sSI "http://localhost:8080$p" | grep -i '^x-robots-tag: noindex'
+          done
       - name: 失敗時列出容器記錄
         if: failure()
         run: docker compose logs --no-color
