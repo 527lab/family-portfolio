@@ -4,7 +4,7 @@
 # 全部使用假帳密與假資料，不需任何真實 token。
 set -euo pipefail
 
-BASE=${BASE:-http://127.0.0.1:8080}
+BASE=${BASE:-http://localhost:8080}   # 要和 SITE_URL 一致，網站才會接受表單 POST
 PASS='ci-fake-password-123'
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
