@@ -126,6 +126,14 @@ describe('未登入', () => {
       expect(html, p).toContain('lang="zh-Hant"');
     }
   });
+
+  it('無障礙：分類頁的作品卡標題接在 h1 之下（h2），不跳級', async () => {
+    const c = new Client();
+    for (const p of ['/painting/', '/photography/']) {
+      const html = await (await c.req(p)).text();
+      expect(html, p).not.toContain('<h3');
+    }
+  });
 });
 
 describe('未登入（補充）', () => {

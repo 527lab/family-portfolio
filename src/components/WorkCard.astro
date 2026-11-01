@@ -1,14 +1,15 @@
 ---
 import type { Work } from '../server/works';
-interface Props { work: Work }
-const { work } = Astro.props;
+interface Props { work: Work; level?: 2 | 3 }
+const { work, level = 3 } = Astro.props;
+const Heading = `h${level}`;
 ---
 <a class="card" href={`/works/${work.id}/`}>
   {work.thumbFile
     ? <img src={`/media/thumbs/${work.thumbFile}`} alt={work.alt} loading="lazy" />
     : <div class="card-ph" aria-hidden="true">{work.category === 'piano' ? '🎹' : '🖼️'}</div>}
   <div class="card-body">
-    <h3>{work.title}</h3>
+    <Heading>{work.title}</Heading>
     <p class="meta">{work.date.slice(0, 4)} 年{work.result ? `・${work.result}` : ''}</p>
     {work.summary && <p>{work.summary}</p>}
   </div>

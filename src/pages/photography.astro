@@ -5,4 +5,4 @@ import { categoryInfo } from '../data/site';
 import { listPublic } from '../server/works';
 const works = listPublic({ categories: ['photography'] });
 ---
-<Base title={categoryInfo.photography.label}><h1>{categoryInfo.photography.label}</h1><p>{categoryInfo.photography.intro}</p><Gallery works={works} /></Base>
+<Base title={categoryInfo.photography.label}><h1>{categoryInfo.photography.label}</h1><p>{categoryInfo.photography.intro}</p><Gallery works={works} level={2} /></Base>
