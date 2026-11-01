@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { makeDataDir, PASSWORD } from '../helpers';
 import {
   authenticate, AuthError, createInvite, createSession, createUser, destroySession, getSessionUser,
-  register, resetRateLimit, setUserStatus,
+  register, resetRateLimit, setUserStatus, getSiteOwnerName, setDisplayName,
 } from '../../src/server/auth.ts';
 import { closeDb, getDb } from '../../src/server/db.ts';
 
@@ -135,5 +135,20 @@ describe('註冊限制', () => {
   it('註冊的帳號永遠是 creator，不會是 admin', async () => {
     process.env.REGISTRATION = 'approval';
     expect((await reg()).role).toBe('creator');
+  });
+});
+
+describe('網站暱稱', () => {
+  it('尚無創作者時顯示中性文字', async () => {
+    await createUser({ username: 'boss', displayName: '管理員', password: PASSWORD, role: 'admin', status: 'active' });
+    expect(getSiteOwnerName()).toBe('創作者');
+  });
+  it('使用創作者暱稱，可修改，空白與過長會被拒絕', async () => {
+    const c = await createUser({ username: 'kid', displayName: '甲', password: PASSWORD, role: 'creator', status: 'active' });
+    expect(getSiteOwnerName()).toBe('甲');
+    setDisplayName(c.id, '乙');
+    expect(getSiteOwnerName()).toBe('乙');
+    expect(() => setDisplayName(c.id, '  ')).toThrow(AuthError);
+    expect(() => setDisplayName(c.id, 'x'.repeat(21))).toThrow(AuthError);
   });
 });

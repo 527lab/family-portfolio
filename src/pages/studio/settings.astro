@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/Base.astro';
+import { AuthError, setDisplayName, getUserById } from '../../server/auth';
+
+const user = Astro.locals.user!;
+let error = '';
+let saved = Astro.url.searchParams.get('ok') === '1';
+let name = user.displayName;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  name = String(form.get('display_name') ?? '').trim();
+  try {
+    setDisplayName(user.id, name);
+    return Astro.redirect('/studio/settings/?ok=1', 303);
+  } catch (e) {
+    if (!(e instanceof AuthError)) throw e;
+    error = e.message;
+    Astro.response.status = 400;
+  }
+} else {
+  name = getUserById(user.id)?.displayName ?? name;
+}
+---
+<Base title="個人設定">
+  <h1>個人設定</h1>
+  <p><a href="/studio/">← 回到我的作品</a></p>
+  {saved && <p class="ok" role="status">已儲存</p>}
+  {error && <p class="error" role="alert">{error}</p>}
+  <form method="post" class="form narrow">
+    <label>暱稱（顯示在網站上，1–20 字，請勿使用真名）<input name="display_name" value={name} required maxlength="20" /></label>
+    <button type="submit">儲存</button>
+  </form>
+</Base>
