@@ -52,7 +52,7 @@ jobs:
       - name: 啟動 compose（web + nginx）
         run: docker compose up -d --build --wait --wait-timeout 180
       - name: 驗證 X-Robots-Tag、Range 206、413
-        run: ./scripts/ci-smoke.sh
+        run: bash scripts/ci-smoke.sh
       - name: 失敗時列出容器記錄
         if: failure()
         run: docker compose logs --no-color
