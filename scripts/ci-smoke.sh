@@ -27,9 +27,10 @@ echo "$hdr"
 echo "$hdr" | grep -i '^x-robots-tag: noindex' >/dev/null
 
 echo "== 登入並上傳 300 KB 假影片（MAX_VIDEO_MB=1 之內）=="
-curl -sS -o /dev/null -c "$WORK/jar" -H "Origin: $BASE" \
-  -F username=ciadmin -F "password=$PASS" "$BASE/login/"
-grep -q sid "$WORK/jar"
+code=$(curl -sS -o "$WORK/login.html" -w '%{http_code}' -c "$WORK/jar" -H "Origin: $BASE" \
+  -F username=ciadmin -F "password=$PASS" "$BASE/login/")
+echo "登入回應：$code"
+if ! grep -q sid "$WORK/jar"; then cat "$WORK/login.html"; docker compose logs --no-color web | tail -20; exit 1; fi
 make_mp4 307200 "$WORK/small.mp4"
 code=$(curl -sS -o /dev/null -w '%{http_code}' -b "$WORK/jar" -H "Origin: $BASE" \
   -F category=piano -F title=ci-test -F date=2026-01-01 -F status=published \
