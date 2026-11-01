@@ -1,0 +1,17 @@
+# Cloudflare Tunnel 設定範本（僅供參考，不含任何金鑰）。
+#
+# 預設做法（建議）：在 Cloudflare Zero Trust 網頁上建立 Tunnel，把 token 放進 .env 的 TUNNEL_TOKEN，
+# 再用 `docker compose --profile tunnel up -d` 啟動；Public Hostname 的 Service 填 http://nginx:8080。
+# 這種做法不需要這個檔案。
+#
+# 若你偏好用本機設定檔（locally-managed tunnel），複製成 config.yml 並填入自己的 Tunnel ID：
+#   tunnel: <TUNNEL_ID>
+#   credentials-file 由 cloudflared 登入後產生，絕對不要提交到 git。
+tunnel: 00000000-0000-0000-0000-000000000000
+credentials-file: /etc/cloudflared/00000000-0000-0000-0000-000000000000.json
+
+ingress:
+  - hostname: portfolio.example.com
+    service: http://nginx:8080
+  # 最後一條必填：其他網址一律 404
+  - service: http_status:404

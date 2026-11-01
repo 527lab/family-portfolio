@@ -125,10 +125,10 @@ robots.txt 與 noindex 只是「請搜尋引擎不要收錄」，不是存取控
 ## 10. 部署與維運
 
 ```
-瀏覽器 → Cloudflare（網域、HTTPS）→ Cloudflare Tunnel → cloudflared 容器 → web 容器（Node，4321）
-                                                                          └─ volume /data（SQLite + 上傳檔）
+瀏覽器 → Cloudflare（網域、HTTPS）→ Cloudflare Tunnel → cloudflared 容器 → nginx 容器（8080）→ web 容器（Node，4321）
+                                                                                              └─ volume /data（SQLite + 上傳檔）
 ```
-- 家中不需開 port 或固定 IP；`web` 只綁 `127.0.0.1:8080` 供本機測試。
+- 家中不需開 port 或固定 IP；`nginx` 只綁 `127.0.0.1:8080` 供本機測試，`web` 不對外開 port；nginx 負責上傳大小上限（`MAX_VIDEO_MB`）、影片 Range 轉發與 `X-Robots-Tag`（`NOINDEX`）。部署細節見 `docs/deploy.md`。
 - Tunnel token 放 `.env`，不進版控。容器以非 root（`node`）執行。
 - **建立第一個管理員**（不經網頁，密碼互動輸入、不進 shell 歷史）：
   `docker compose exec web node scripts/user.ts create-admin <帳號> [暱稱]`
