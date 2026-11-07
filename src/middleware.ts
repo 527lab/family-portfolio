@@ -42,6 +42,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const noStore = isStudio || pathname === '/login' || pathname === '/login/' || pathname.startsWith('/register');
-  const isPrivate = noStore || pathname === '/logout';
+  const isPrivate = noStore || pathname === '/logout' || pathname === '/logout/';
   return secure(await next(), noStore, site.noindex || isPrivate);
 });

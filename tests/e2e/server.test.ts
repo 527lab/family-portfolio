@@ -238,6 +238,14 @@ describe('創作者上傳與權限', () => {
     expect(html).toContain(`property="og:image" content="${base}/media/images/${w.imageFile}"`);
   });
 
+  it('無障礙：有作品時，分類頁作品卡標題是 h2（不跳級），首頁精選維持 h3', async () => {
+    const cat = await (await fetch(base + '/painting/')).text();
+    expect(cat).toMatch(/<h2[^>]*>[\s\S]*?公開的畫/);
+    expect(cat).not.toContain('<h3');
+    const home = await (await fetch(base + '/')).text();
+    if (home.includes('公開的畫')) expect(home).toMatch(/<h3[^>]*>[\s\S]*?公開的畫/);
+  });
+
   it('草稿：訪客與其他創作者看不到頁面和檔案，作者與管理員可以', async () => {
     const res = await alice.post('/studio/new/', await workBody({ title: '私密草稿', status: 'draft' }));
     expect(res.status).toBe(303);
@@ -367,6 +375,8 @@ describe('開放收錄（NOINDEX=false）時私人頁面仍不收錄', () => {
       expect(await res.text(), p).toMatch(/<meta name="robots" content="noindex/);
     }
     expect((await fetch(b2 + '/studio/', { redirect: 'manual' })).headers.get('x-robots-tag')).toContain('noindex');
+    expect((await fetch(b2 + '/logout/', { redirect: 'manual' })).headers.get('x-robots-tag')).toContain('noindex');
+    expect((await fetch(b2 + '/studio/admin/', { redirect: 'manual' })).headers.get('x-robots-tag')).toContain('noindex');
     const robots = await (await fetch(b2 + '/robots.txt')).text();
     expect(robots).toContain('Allow: /');
     for (const p of ['/studio/', '/login/', '/register/']) expect(robots).toContain('Disallow: ' + p);
