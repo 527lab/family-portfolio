@@ -1,10 +1,16 @@
 # nginx 反向代理設定樣板。官方映像檔啟動時會把 ${MAX_VIDEO_MB}、${NOINDEX} 代入，輸出到 /etc/nginx/conf.d/default.conf
 # （只代入 NGINX_ENVSUBST_FILTER 指定的變數，nginx 自己的 $host 等變數不受影響）。
 
-# NOINDEX=true（預設）時，所有回應（含圖片、影片）都帶 X-Robots-Tag；改成 false 才放行
-map "${NOINDEX}" $robots_header {
+# 私人頁面（後台、登入、註冊、登出）：不論 NOINDEX 為何，一律不讓搜尋引擎收錄
+map $uri $private_path {
+    default 0;
+    ~^/(studio|login|register|logout)(/|$) 1;
+}
+
+# NOINDEX=true（預設）時，所有回應（含圖片、影片）都帶 X-Robots-Tag；改成 false 只放行公開內容，私人頁面仍 noindex
+map "${NOINDEX}:$private_path" $robots_header {
     default "noindex, nofollow, noarchive";
-    "false" "";
+    "false:0" "";
 }
 
 # 依請求決定 Connection 標頭（CF-Connecting-IP 等其他標頭預設就會原樣轉給網站，登入限流用）

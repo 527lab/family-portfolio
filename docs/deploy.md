@@ -51,7 +51,7 @@ cp .env.example .env
 | `SITE_URL` | 對外網址，例如 `https://portfolio.example.com`（要 `https://`、結尾不要斜線） |
 | `TRUST_PROXY` | `true`（走 Tunnel 時） |
 | `MAX_VIDEO_MB` | 上傳大小上限，預設 200。nginx 和網站都會照這個值限制 |
-| `NOINDEX` | 先維持 `true`（不讓 Google 收錄）。準備好公開後改 `false` 再重啟 |
+| `NOINDEX` | 先維持 `true`（不讓 Google 收錄）。準備好公開後改 `false` 再重啟（後台、登入、註冊頁仍一律 noindex）|
 | `REGISTRATION` | 先維持 `invite`（要邀請碼才能註冊） |
 
 > `SITE_URL` 會寫進建置結果，**改了之後要加 `--build` 重新建置**（見更新章節）。其他變數改了只要重啟。
