@@ -60,7 +60,7 @@
 ## 5. 帳號、註冊與 session
 
 - **密碼**：argon2id（`@node-rs/argon2` 預設參數），長度 10–128；資料庫只存雜湊。登入時帳號不存在也會做一次雜湊驗證，降低以回應時間猜帳號的風險；錯誤訊息一律是「帳號或密碼不正確」。
-- **暴力破解防護**：同一帳號 15 分鐘內失敗 5 次、同一 IP 失敗 20 次即鎖定（記憶體計數，重啟清空）。經 Cloudflare Tunnel 時設 `TRUST_PROXY=true`，才改用 `CF-Connecting-IP`。
+- **暴力破解防護**：同一帳號 15 分鐘內失敗 5 次、同一 IP 失敗 20 次即鎖定（記憶體計數，重啟清空）。經 Cloudflare Tunnel 時設 `TRUST_PROXY=true`，才改用 `CF-Connecting-IP`。註冊頁同一 IP 15 分鐘內最多送 10 次；計數表最多保留 10,000 筆，超過時淘汰最舊的。
 - **Session**：登入後產生 32 位元組隨機 token，放在 cookie `sid`：`HttpOnly`、`SameSite=Lax`、`Path=/`、HTTPS 時加 `Secure`（`SITE_URL` 為 https 時自動）、預設 30 天。資料庫只存 token 的 SHA-256，所以資料庫外洩也無法直接冒用。
 - **CSRF**：Astro 內建 `checkOrigin`（跨站表單 POST 回 403）+ `SameSite=Lax`；登出只接受 POST。
 - **安全標頭**：`X-Content-Type-Options`、`X-Frame-Options: DENY`、`Referrer-Policy`，正式環境另加 CSP（只允許自己的資源與 `youtube-nocookie.com` 內嵌）。

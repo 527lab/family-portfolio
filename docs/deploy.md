@@ -49,7 +49,7 @@ cp .env.example .env
 |---|---|
 | `TUNNEL_TOKEN` | 上一步複製的 token |
 | `SITE_URL` | 對外網址，例如 `https://portfolio.example.com`（要 `https://`、結尾不要斜線） |
-| `TRUST_PROXY` | `true`（走 Tunnel 時） |
+| `TRUST_PROXY` | **`true`（走 Tunnel 時務必設定）**。沒設的話所有訪客會被當成同一個 IP，任何人連續登入失敗 20 次就會鎖住全站登入 15 分鐘；`SITE_URL` 是 https 卻沒設時，網站啟動會在日誌印出警告 |
 | `MAX_VIDEO_MB` | 上傳大小上限，預設 200。nginx 和網站都會照這個值限制 |
 | `NOINDEX` | 先維持 `true`（不讓 Google 收錄）。準備好公開後改 `false` 再重啟（後台、登入、註冊頁仍一律 noindex）|
 | `REGISTRATION` | 先維持 `invite`（要邀請碼才能註冊） |
