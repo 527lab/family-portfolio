@@ -5,8 +5,9 @@ services:
       args:
         SITE_URL: ${SITE_URL:-http://localhost:8080}
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8080:4321"   # 只開本機，對外一律走 Cloudflare Tunnel
+    # 不對外開 port：只有同一個 compose 網路裡的 nginx 連得到
+    expose:
+      - "4321"
     environment:
       NOINDEX: ${NOINDEX:-true}
       SITE_URL: ${SITE_URL:-http://localhost:8080}
@@ -19,17 +20,34 @@ services:
     # 上傳影片時容器會暫用記憶體，視伺服器調整
     mem_limit: 1g
 
+  # 反向代理：上傳大小上限、影片 Range、X-Robots-Tag。非 root 版本的 nginx，監聽 8080
+  nginx:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"   # 只開本機，對外一律走 Cloudflare Tunnel
+    environment:
+      MAX_VIDEO_MB: ${MAX_VIDEO_MB:-200}
+      NOINDEX: ${NOINDEX:-true}
+      NGINX_ENVSUBST_FILTER: "^(MAX_VIDEO_MB|NOINDEX)$$"
+    volumes:
+      - ./deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+
   # Cloudflare Tunnel：token 從 .env 讀取（不進版控）
-  # 用 `docker compose --profile tunnel up -d` 啟動；Tunnel 的 Public Hostname 服務填 http://web:4321
+  # 用 `docker compose --profile tunnel up -d` 啟動；Tunnel 的 Public Hostname 服務填 http://nginx:8080
+  # 設定檔範本見 deploy/cloudflared/config.example.yml
   cloudflared:
     image: cloudflare/cloudflared:latest
     profiles: ["tunnel"]
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?請在 .env 設定 TUNNEL_TOKEN}
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}   # 用 tunnel profile 啟動前務必在 .env 填入
     depends_on:
-      - web
+      - nginx
 
 volumes:
   portfolio-data:

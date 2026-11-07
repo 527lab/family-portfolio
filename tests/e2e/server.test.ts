@@ -118,6 +118,43 @@ describe('未登入', () => {
   });
 });
 
+describe('未登入（補充）', () => {
+  it('後台所有寫入端點（含編輯、刪除、帳號管理）都要登入', async () => {
+    const c = new Client();
+    for (const p of ['/studio/works/1/', '/studio/admin/', '/studio/settings/']) {
+      const res = await c.post(p, { action: 'delete', confirm: 'yes' });
+      expect(res.status, p).toBe(303);
+      expect(res.headers.get('location'), p).toMatch(/^\/login\//);
+    }
+    // 沒有斜線與大小寫變化也不能繞過
+    for (const p of ['/studio', '/studio/admin', '/studio/new']) {
+      const res = await c.req(p);
+      expect(res.status, p).toBe(303);
+    }
+  });
+
+  it('後台與登入頁不被快取', async () => {
+    const res = await new Client().req('/login/');
+    expect(res.headers.get('cache-control')).toContain('no-store');
+  });
+});
+
+describe('noindex', () => {
+  it('預設所有頁面都帶 X-Robots-Tag 與 robots meta，robots.txt 禁止收錄', async () => {
+    for (const p of ['/', '/about/', '/painting/', '/login/', '/robots.txt']) {
+      const res = await fetch(base + p);
+      expect(res.headers.get('x-robots-tag'), p).toBe('noindex, nofollow, noarchive');
+    }
+    expect(await (await fetch(base + '/')).text()).toMatch(/<meta name="robots" content="noindex/);
+    expect(await (await fetch(base + '/robots.txt')).text()).toContain('Disallow: /');
+  });
+
+  it('導向與 404 回應也帶 X-Robots-Tag', async () => {
+    expect((await fetch(base + '/studio/', { redirect: 'manual' })).headers.get('x-robots-tag')).toContain('noindex');
+    expect((await fetch(base + '/no-such-page/')).headers.get('x-robots-tag')).toContain('noindex');
+  });
+});
+
 describe('登入', () => {
   it('密碼錯誤：401，且不發 session cookie', async () => {
     const c = new Client();
@@ -217,6 +254,22 @@ describe('創作者上傳與權限', () => {
     const res = await alice.post('/studio/new/', await workBody({ image: evil, title: '惡意' }));
     expect(res.status).toBe(400);
     expect(works.listForStudio({ id: 0, role: 'admin' } as any)).toHaveLength(before);
+  });
+
+  it('偽裝成影片的檔案被拒絕，不建立作品；檔案不會被存下', async () => {
+    const before = works.listForStudio({ id: 0, role: 'admin' } as any).length;
+    const res = await alice.post('/studio/new/', {
+      category: 'piano', title: '假影片', date: '2025-06-03', status: 'published', video_mode: 'file',
+      video: new File(['MZ  not a video'], 'v.mp4', { type: 'video/mp4' }),
+    });
+    expect(res.status).toBe(400);
+    expect(works.listForStudio({ id: 0, role: 'admin' } as any)).toHaveLength(before);
+  });
+
+  it('媒體路徑穿越與不存在的檔案回 404', async () => {
+    for (const p of ['/media/images/..%2F..%2Fdata.db', '/media/images/%2e%2e/x.webp', '/media/images/x.webp', '/media/other/' + 'a'.repeat(32) + '.webp']) {
+      expect((await fetch(base + p)).status, p).toBe(404);
+    }
   });
 
   it('鋼琴影片：可上傳 MP4，支援 Range；也可貼 YouTube 連結', async () => {

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import sharp from 'sharp';
-import { makeDataDir, mp4Bytes, pngFile } from '../helpers';
+import { makeDataDir, mp4Bytes, pngBuffer, pngFile } from '../helpers';
 import { closeDb } from '../../src/server/db.ts';
 import { mediaPath, parseYouTubeId, saveImage, saveVideo, UploadError } from '../../src/server/media.ts';
 
@@ -57,6 +57,13 @@ describe('圖片上傳', () => {
     await expect(saveImage(await pngFile('big.png', 1500, 1500))).rejects.toThrow('不可超過');
   });
 
+  it('拒絕檔頭被截斷的圖片與 PNG 檔頭後接惡意內容', async () => {
+    const png = new Uint8Array(await pngBuffer());
+    await expect(saveImage(new File([png.slice(0, 12)], 'x.png', { type: 'image/png' }))).rejects.toThrow(UploadError);
+    const evil = new Uint8Array([...png.slice(0, 8), ...new TextEncoder().encode('<script>alert(1)</script>')]);
+    await expect(saveImage(new File([evil], 'x.png', { type: 'image/png' }))).rejects.toThrow(UploadError);
+  });
+
   it('空檔案被拒絕', async () => {
     await expect(saveImage(new File([], 'e.png', { type: 'image/png' }))).rejects.toThrow(UploadError);
   });
@@ -78,6 +85,13 @@ describe('影片上傳', () => {
     await expect(saveVideo(new File(['MZ\x90\x00 not a video at all'], 'v.mp4', { type: 'video/mp4' }))).rejects.toThrow(UploadError);
     const webm = Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3, 0, 0, 0, 0, 0, 0, 0, 0]);
     await expect(saveVideo(new File([webm], 'v.mp4', { type: 'video/mp4' }))).rejects.toThrow(UploadError);
+  });
+
+  it('拒絕過短的檔頭、只有 ftyp 字樣但位置不對的檔案', async () => {
+    await expect(saveVideo(new File([Uint8Array.from([0, 0, 0, 16, 0x66, 0x74])], 'v.mp4', { type: 'video/mp4' }))).rejects.toThrow(UploadError);
+    const shifted = Uint8Array.from([1, 2, 3, 4, 0, 0, 0, 0, 0x66, 0x74, 0x79, 0x70, 0, 0, 0, 0]);
+    await expect(saveVideo(new File([shifted], 'v.mp4', { type: 'video/mp4' }))).rejects.toThrow(UploadError);
+    await expect(saveVideo(new File([], 'v.mp4', { type: 'video/mp4' }))).rejects.toThrow(UploadError);
   });
 
   it('拒絕其他影片格式與超過大小限制', async () => {

@@ -65,14 +65,17 @@ src/data/             標語、導覽、關於我（站上暱稱取自創作者�
 scripts/user.ts       伺服器上的帳號管理指令
 tests/                unit（單元）、e2e（端對端）
 Dockerfile / docker-compose.yml
+deploy/               nginx 設定樣板、Cloudflare Tunnel 設定範本
 ```
 
 ## 部署（David 的家用伺服器）
 
+> 給不熟 Docker 的完整步驟（部署、更新、備份還原、故障排除）見 **[docs/deploy.md](docs/deploy.md)**。以下為摘要。架構：cloudflared → nginx（`deploy/nginx/`，上傳上限、影片 Range、noindex 標頭）→ web。
+
 ### 1. 建立 Cloudflare Tunnel
 1. Cloudflare Zero Trust → Networks → Tunnels → Create a tunnel（Cloudflared）。
 2. 複製 token。
-3. Public Hostname：填網域（如 `portfolio.example.com`），Service 選 `HTTP`，URL 填 `web:4321`。
+3. Public Hostname：填網域（如 `portfolio.example.com`），Service 選 `HTTP`，URL 填 `nginx:8080`。
 
 ### 2. 設定與啟動
 ```bash
