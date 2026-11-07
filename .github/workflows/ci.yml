@@ -58,9 +58,16 @@ jobs:
           NOINDEX: "false"
         run: |
           docker compose up -d --wait --wait-timeout 180
-          ! curl -sSI http://localhost:8080/ | grep -i '^x-robots-tag'
+          # 注意：bash -e 會忽略以 ! 開頭的管線，所以不能寫成 `! curl | grep`，要明確判斷並 exit 1
+          if curl -sSI --max-time 10 http://localhost:8080/ | grep -qi '^x-robots-tag'; then
+            echo '::error::NOINDEX=false 時首頁不該帶 X-Robots-Tag'
+            exit 1
+          fi
           for p in /login/ /register/ /studio/ /logout; do
-            curl -sSI "http://localhost:8080$p" | grep -i '^x-robots-tag: noindex'
+            if ! curl -sSI --max-time 10 "http://localhost:8080$p" | grep -qi '^x-robots-tag: noindex'; then
+              echo "::error::$p 應帶 X-Robots-Tag: noindex"
+              exit 1
+            fi
           done
       - name: 失敗時列出容器記錄
         if: failure()
