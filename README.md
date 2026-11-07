@@ -36,6 +36,13 @@ npm run user -- create-admin admin 管理員
 | `npm run build:fast && npm run test:e2e` | 端對端測試（啟動真實伺服器） |
 | `npm run user -- <指令>` | `create-admin <帳號> [暱稱]`、`reset-password <帳號>`、`list` |
 
+### CI（GitHub Actions）
+
+`.github/workflows/ci.yml` 在每個 PR 與 push 到 main 時執行：
+- `test`：`npm ci`、`npm run build`（含 astro check）、`npm test`、`npm run test:e2e`（Node 版本讀 `.nvmrc`）。e2e 用 vitest 啟動真實伺服器、不需瀏覽器，所以不裝 Playwright。
+- `docker`：`docker compose config`、`docker build`，再把 compose（web + nginx）跑起來，用 `scripts/ci-smoke.sh` 驗證 X-Robots-Tag、影片 Range 回 206、超過 `MAX_VIDEO_MB` 回 413。CI 全用假帳密與假值，不使用任何真實 token。
+- 在有 Docker 的機器上也能手動跑：`MAX_VIDEO_MB=1 docker compose up -d --build --wait && bash scripts/ci-smoke.sh`（會建立 `ciadmin` 測試帳號，請用拋棄式的 volume，跑完 `docker compose down -v`）。
+
 ## 家人怎麼用
 
 1. 向 David 拿邀請碼，開 `/register/` 註冊（帳號、暱稱、密碼至少 10 字元）。暱稱會顯示在網站上，之後可到 `/studio/settings/` 修改。
