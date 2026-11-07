@@ -1,0 +1,62 @@
+---
+import { categories, categoryLabels, type Work } from '../server/works';
+interface Props { work?: Work; values?: Record<string, string>; errors?: string[] }
+const { work, values = {}, errors = [] } = Astro.props;
+// 重新顯示表單時優先用使用者剛填的值，否則用既有作品
+const v = (k: string, fallback = '') => values[k] ?? fallback;
+const cat = v('category', work?.category ?? 'painting');
+const videoMode = v('video_mode', work?.youtubeId ? 'youtube' : work?.videoFile ? 'keep' : 'file');
+const today = new Date().toISOString().slice(0, 10);
+---
+{errors.length > 0 && <ul class="error" role="alert">{errors.map((e) => <li>{e}</li>)}</ul>}
+<form method="post" enctype="multipart/form-data" class="form">
+  <label>分類
+    <select name="category">
+      {categories.map((c) => <option value={c} selected={c === cat}>{categoryLabels[c]}</option>)}
+    </select>
+  </label>
+  <label>作品名稱<input name="title" value={v('title', work?.title)} required maxlength="60" /></label>
+  <label>完成／演出日期<input type="date" name="date" value={v('date', work?.date ?? today)} required /></label>
+  <label>一句話介紹（120 字內，顯示在卡片上）<input name="summary" value={v('summary', work?.summary)} maxlength="120" /></label>
+  <label>創作說明（理念、過程、心得）<textarea name="description" rows="8" maxlength="5000">{v('description', work?.description)}</textarea></label>
+
+  <fieldset>
+    <legend>圖片（JPG／PNG／WebP，會自動縮圖並移除 EXIF）</legend>
+    {work?.thumbFile && <p><img class="thumb" src={`/media/thumbs/${work.thumbFile}`} alt={work.alt} /><br /><small>已有圖片；選新檔案會取代它。</small></p>}
+    <label>選擇圖片（畫作、攝影、證書必填；鋼琴可當影片封面）<input type="file" name="image" accept="image/jpeg,image/png,image/webp" /></label>
+    <label>圖片文字說明（給視障者與圖片載入失敗時使用）<input name="alt" value={v('alt', work?.alt)} maxlength="120" /></label>
+    <p class="hint">證書請先遮蔽姓名、證號、學校等個資再上傳。</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>影片（鋼琴演奏）</legend>
+    <label class="inline"><input type="radio" name="video_mode" value="file" checked={videoMode === 'file'} /> 上傳影片檔（MP4／WebM，200 MB 內）</label>
+    <input type="file" name="video" accept="video/mp4,video/webm" />
+    <label class="inline"><input type="radio" name="video_mode" value="youtube" checked={videoMode === 'youtube'} /> 貼 YouTube 不公開連結</label>
+    <input name="youtube" value={v('youtube', work?.youtubeId ? `https://youtu.be/${work.youtubeId}` : '')} placeholder="https://youtu.be/…" maxlength="200" />
+    {work && (work.videoFile || work.youtubeId) && (
+      <label class="inline"><input type="radio" name="video_mode" value="keep" checked={videoMode === 'keep'} /> 保留目前的影片</label>
+    )}
+    <label class="inline"><input type="radio" name="video_mode" value="none" checked={videoMode === 'none'} /> 不放影片</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>選填資料</legend>
+    <label>媒材（畫作）<input name="medium" value={v('medium', work?.medium)} maxlength="60" /></label>
+    <label>尺寸（畫作）<input name="size" value={v('size', work?.size)} maxlength="60" /></label>
+    <label>地點（攝影）<input name="location" value={v('location', work?.location)} maxlength="60" /></label>
+    <label>器材（攝影）<input name="camera" value={v('camera', work?.camera)} maxlength="60" /></label>
+    <label>作曲家（演奏）<input name="composer" value={v('composer', work?.composer)} maxlength="60" /></label>
+    <label>場合／單位<input name="event" value={v('event', work?.event)} maxlength="60" /></label>
+    <label>成績<input name="result" value={v('result', work?.result)} maxlength="60" /></label>
+  </fieldset>
+
+  <label>狀態
+    <select name="status">
+      <option value="draft" selected={v('status', work?.status ?? 'draft') === 'draft'}>草稿（只有我看得到）</option>
+      <option value="published" selected={v('status', work?.status ?? 'draft') === 'published'}>公開</option>
+    </select>
+  </label>
+  <label class="inline"><input type="checkbox" name="featured" checked={values.featured ? values.featured === 'on' : work?.featured} /> 顯示在首頁精選</label>
+  <button type="submit">儲存</button>
+</form>

@@ -1,0 +1,15 @@
+---
+import type { Work } from '../server/works';
+interface Props { work: Work }
+const { work } = Astro.props;
+---
+<a class="card" href={`/works/${work.id}/`}>
+  {work.thumbFile
+    ? <img src={`/media/thumbs/${work.thumbFile}`} alt={work.alt} loading="lazy" />
+    : <div class="card-ph" aria-hidden="true">{work.category === 'piano' ? '🎹' : '🖼️'}</div>}
+  <div class="card-body">
+    <h3>{work.title}</h3>
+    <p class="meta">{work.date.slice(0, 4)} 年{work.result ? `・${work.result}` : ''}</p>
+    {work.summary && <p>{work.summary}</p>}
+  </div>
+</a>

@@ -1,0 +1,59 @@
+:root { --fg:#222; --muted:#666; --bg:#fffdf9; --accent:#c4533b; --line:#e8e2d9; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: system-ui, "Noto Sans TC", "Microsoft JhengHei", sans-serif; color:var(--fg); background:var(--bg); line-height:1.8; }
+main { max-width: 1000px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+a { color: var(--accent); }
+.site-header { display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; align-items:center; justify-content:space-between; padding:1rem; border-bottom:1px solid var(--line); }
+.brand { font-size:1.25rem; font-weight:700; text-decoration:none; color:var(--fg); }
+nav { display:flex; gap:1.25rem; }
+nav a { text-decoration:none; color:var(--fg); padding:.25rem 0; border-bottom:2px solid transparent; }
+nav a:hover, nav a[aria-current] { border-color: var(--accent); }
+.hero { padding: 3rem 0 2rem; }
+.hero h1 { font-size: clamp(2rem, 6vw, 3rem); margin:0; }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:1.25rem; }
+.card { display:block; text-decoration:none; color:inherit; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; }
+.card:hover { box-shadow:0 4px 16px rgba(0,0,0,.1); }
+.card img { width:100%; aspect-ratio: 4/3; object-fit:cover; display:block; }
+.card-body { padding:.75rem 1rem 1rem; }
+.card h3 { margin:0; font-size:1.1rem; }
+.card p { margin:.25rem 0 0; }
+.meta { color:var(--muted); font-size:.9rem; }
+.media { width:100%; max-height:80vh; object-fit:contain; border-radius:8px; background:#111; display:block; }
+.embed { position:relative; aspect-ratio:16/9; }
+.embed iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+.facts { display:grid; grid-template-columns: max-content 1fr; gap:.25rem 1rem; margin:1.5rem 0; }
+.facts dt { color:var(--muted); }
+.facts dd { margin:0; }
+.prose { max-width: 40rem; }
+.site-footer { text-align:center; color:var(--muted); padding:2rem 1rem; border-top:1px solid var(--line); }
+
+/* ---- 登入／後台 ---- */
+.form { display:grid; gap:1rem; max-width:40rem; }
+.form.narrow { max-width:22rem; }
+.form label { display:grid; gap:.25rem; font-weight:600; }
+.form label.inline, label.inline { display:flex; gap:.5rem; align-items:center; font-weight:400; }
+input:not([type=radio]):not([type=checkbox]), select, textarea { font:inherit; padding:.5rem; border:1px solid var(--line); border-radius:6px; background:#fff; width:100%; }
+fieldset { border:1px solid var(--line); border-radius:8px; padding:1rem; display:grid; gap:.75rem; }
+legend { font-weight:700; padding:0 .5rem; }
+button { font:inherit; padding:.5rem 1.25rem; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; }
+button:disabled { opacity:.35; cursor:default; }
+button.link { background:none; color:var(--accent); padding:0; text-decoration:underline; }
+.error { color:#b3261e; background:#fdecea; padding:.75rem 1rem; border-radius:6px; }
+.ok { color:#1b5e20; background:#e8f5e9; padding:.75rem 1rem; border-radius:6px; }
+.notice { background:#fff4d6; padding:.5rem 1rem; border-radius:6px; }
+.hint, small { color:var(--muted); font-size:.9rem; }
+.studio-list { list-style:none; padding:0; display:grid; gap:.5rem; }
+.studio-list li { display:flex; align-items:center; gap:.75rem; border:1px solid var(--line); border-radius:8px; padding:.5rem; background:#fff; }
+.grow { flex:1; }
+.thumb { width:64px; height:48px; object-fit:cover; border-radius:4px; background:#eee; }
+.thumb.ph, .card-ph { display:grid; place-items:center; }
+.card-ph { aspect-ratio:4/3; background:#f0ebe3; font-size:2.5rem; }
+.badge { font-size:.75rem; padding:.1rem .5rem; border-radius:99px; background:#eee; margin-left:.5rem; }
+.badge.published { background:#e8f5e9; color:#1b5e20; }
+.inline-form { display:flex; gap:.25rem; }
+.inline-form button { padding:.25rem .6rem; }
+.danger { margin-top:2rem; border:1px solid #e6b8b4; border-radius:8px; padding:.75rem 1rem; }
+.danger button { background:#b3261e; }
+.code { font-size:1.25rem; letter-spacing:.05em; user-select:all; }
+table { border-collapse:collapse; width:100%; margin:1rem 0; }
+th, td { text-align:left; padding:.4rem .6rem; border-bottom:1px solid var(--line); }

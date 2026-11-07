@@ -1,0 +1,8 @@
+---
+import Base from '../layouts/Base.astro';
+import Gallery from '../components/Gallery.astro';
+import { categoryInfo } from '../data/site';
+import { listPublic } from '../server/works';
+const works = listPublic({ categories: ['photography'] });
+---
+<Base title={categoryInfo.photography.label}><h1>{categoryInfo.photography.label}</h1><p>{categoryInfo.photography.intro}</p><Gallery works={works} /></Base>

@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import { authenticate, createSession } from '../server/auth';
+import { clientIp, safeNext, setSessionCookie } from '../server/http';
+
+if (Astro.locals.user) return Astro.redirect('/studio/');
+const next = safeNext(Astro.url.searchParams.get('next'));
+let error = '';
+let username = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  username = String(form.get('username') ?? '').trim();
+  const r = await authenticate(username, String(form.get('password') ?? ''), clientIp(Astro.request, Astro.clientAddress));
+  if (r.ok) {
+    const { token, expires } = createSession(r.user.id);
+    setSessionCookie(Astro.cookies, token, expires);
+    return Astro.redirect(safeNext(String(form.get('next') ?? '')), 303);
+  }
+  Astro.response.status = r.reason === 'locked' ? 429 : 401;
+  error = {
+    invalid: '帳號或密碼不正確',
+    locked: '嘗試次數過多，請 15 分鐘後再試',
+    pending: '帳號還在等待管理員核准',
+    disabled: '這個帳號已停用',
+  }[r.reason];
+}
+---
+<Base title="創作者登入">
+  <h1>創作者登入</h1>
+  <p>這裡是創作者管理作品的入口。訪客不需要登入，直接瀏覽即可。</p>
+  {error && <p class="error" role="alert">{error}</p>}
+  <form method="post" class="form narrow">
+    <input type="hidden" name="next" value={next} />
+    <label>帳號<input name="username" value={username} autocomplete="username" required maxlength="20" /></label>
+    <label>密碼<input type="password" name="password" autocomplete="current-password" required maxlength="128" /></label>
+    <button type="submit">登入</button>
+  </form>
+  <p><a href="/register/">用邀請碼註冊</a></p>
+</Base>

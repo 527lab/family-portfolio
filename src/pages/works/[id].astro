@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import { categoryInfo } from '../../data/site';
+import { getWork, getPublicWork, canManage } from '../../server/works';
+
+// 公開頁只顯示已公開作品；作者本人與管理員可預覽自己的草稿
+const id = Number(Astro.params.id);
+const work = Number.isInteger(id) ? (getPublicWork(id) ?? (() => { const w = getWork(id); return w && canManage(Astro.locals.user, w) ? w : null; })()) : null;
+if (!work) return new Response('找不到作品', { status: 404 });
+const info = categoryInfo[work.category];
+const facts = [
+  ['類別', info.label], ['年份', work.date.slice(0, 4)], ['媒材', work.medium], ['尺寸', work.size],
+  ['地點', work.location], ['器材', work.camera], ['作曲家', work.composer], ['場合', work.event], ['成績', work.result],
+  ['作者', work.ownerName],
+].filter(([, v]) => v);
+---
+<Base title={work.title} description={work.summary || undefined}>
+  <p><a href={info.path}>← 回到{info.label}</a></p>
+  {work.status === 'draft' && <p class="notice">這是草稿，只有你看得到。</p>}
+  <h1>{work.title}</h1>
+  {work.videoFile && (
+    <video controls preload="metadata" playsinline class="media" poster={work.imageFile ? `/media/images/${work.imageFile}` : undefined}>
+      <source src={`/media/videos/${work.videoFile}`} />
+      您的瀏覽器不支援影片播放。
+    </video>
+  )}
+  {work.youtubeId && (
+    <div class="media embed">
+      <iframe src={`https://www.youtube-nocookie.com/embed/${work.youtubeId}`} title={work.title} loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    </div>
+  )}
+  {!work.videoFile && !work.youtubeId && work.imageFile && <img class="media" src={`/media/images/${work.imageFile}`} alt={work.alt} />}
+  <dl class="facts">{facts.map(([k, v]) => <><dt>{k}</dt><dd>{v}</dd></>)}</dl>
+  {work.description && <article class="prose" style="white-space: pre-wrap">{work.description}</article>}
+</Base>

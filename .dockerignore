@@ -1,0 +1,11 @@
+node_modules
+dist
+.astro
+.git
+.agents
+.env
+.env.*
+!.env.example
+data
+tests
+docs

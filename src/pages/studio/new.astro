@@ -1,0 +1,24 @@
+---
+import Base from '../../layouts/Base.astro';
+import WorkForm from '../../components/WorkForm.astro';
+import { submitWork, bodyTooLarge } from '../../server/workForm';
+import { textValues } from '../../server/formValues';
+
+const user = Astro.locals.user!;
+let errors: string[] = [];
+let values: Record<string, string> = {};
+if (Astro.request.method === 'POST') {
+  if (bodyTooLarge(Astro.request)) return new Response('檔案太大', { status: 413 });
+  const form = await Astro.request.formData();
+  values = textValues(form);
+  const r = await submitWork(user, form);
+  if (r.work) return Astro.redirect('/studio/?ok=saved', 303);
+  errors = r.errors;
+  Astro.response.status = 400;
+}
+---
+<Base title="新增作品">
+  <p><a href="/studio/">← 回到我的作品</a></p>
+  <h1>新增作品</h1>
+  <WorkForm values={values} errors={errors} />
+</Base>

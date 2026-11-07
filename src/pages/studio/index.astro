@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+import { categories, categoryLabels, listForStudio, moveWork, ForbiddenError } from '../../server/works';
+
+const user = Astro.locals.user!;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const dir = form.get('dir') === 'up' ? 'up' : 'down';
+  try {
+    moveWork(user, Number(form.get('id')), dir);
+  } catch (e) {
+    if (!(e instanceof ForbiddenError)) throw e;
+    return new Response('沒有權限', { status: 403 });
+  }
+  return Astro.redirect('/studio/', 303);
+}
+const works = listForStudio(user);
+const notice = Astro.url.searchParams.get('ok');
+const msg = ({ saved: '已儲存', deleted: '已刪除' } as Record<string, string>)[notice ?? ''];
+---
+<Base title="創作者後台">
+  <h1>我的作品</h1>
+  <p>
+    你好，{user.displayName}（{user.role === 'admin' ? '管理員' : '創作者'}）。
+    <a href="/studio/new/">＋ 新增作品</a>
+    {user.role === 'admin' && <> ・ <a href="/studio/admin/">管理帳號與邀請碼</a></>}
+  </p>
+  <form method="post" action="/logout"><button type="submit" class="link">登出</button></form>
+  {msg && <p class="ok" role="status">{msg}</p>}
+  {works.length === 0 && <p>還沒有作品，按「新增作品」開始。</p>}
+  {categories.map((c) => {
+    const list = works.filter((w) => w.category === c);
+    return list.length > 0 && (
+      <section>
+        <h2>{categoryLabels[c]}</h2>
+        <p class="hint">排序越上面，在公開頁越前面。</p>
+        <ul class="studio-list">
+          {list.map((w, i) => (
+            <li>
+              {w.thumbFile ? <img class="thumb" src={`/media/thumbs/${w.thumbFile}`} alt="" /> : <span class="thumb ph">{c === 'piano' ? '🎹' : '🖼️'}</span>}
+              <span class="grow">
+                <a href={`/studio/works/${w.id}/`}>{w.title}</a>
+                <span class={`badge ${w.status}`}>{w.status === 'published' ? '公開' : '草稿'}</span>
+                {w.featured && <span class="badge">精選</span>}
+                {user.role === 'admin' && <span class="meta"> ・{w.ownerName}</span>}
+              </span>
+              <form method="post" class="inline-form">
+                <input type="hidden" name="id" value={w.id} />
+                <button name="dir" value="up" disabled={i === 0} aria-label={`上移 ${w.title}`}>↑</button>
+                <button name="dir" value="down" disabled={i === list.length - 1} aria-label={`下移 ${w.title}`}>↓</button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  })}
+</Base>
