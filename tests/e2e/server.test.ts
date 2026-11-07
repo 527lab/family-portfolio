@@ -225,6 +225,9 @@ describe('創作者上傳與權限', () => {
     expect(thumb.status).toBe(200);
     expect(thumb.headers.get('content-type')).toBe('image/webp');
     expect((await fetch(`${base}/media/images/${w.imageFile}`)).status).toBe(200);
+    // Open Graph：公開作品頁帶有絕對網址的預覽圖
+    const html = await (await fetch(`${base}/works/${w.id}/`)).text();
+    expect(html).toContain(`property="og:image" content="${base}/media/images/${w.imageFile}"`);
   });
 
   it('草稿：訪客與其他創作者看不到頁面和檔案，作者與管理員可以', async () => {
@@ -299,6 +302,8 @@ describe('創作者上傳與權限', () => {
     expect(yt.status).toBe(303);
     const page = await (await fetch(`${base}/works/${works.listPublic({ categories: ['piano'] })[0].id}/`)).text();
     expect(page).toContain('youtube-nocookie.com/embed/abcdEFGhijk');
+    expect(page).toContain('property="og:title"');
+    expect(page).not.toContain('og:image');
   });
 
   it('創作者不能進帳號管理頁，管理員可以', async () => {

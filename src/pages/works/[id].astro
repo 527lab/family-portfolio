@@ -14,7 +14,7 @@ const facts = [
   ['作者', work.ownerName],
 ].filter(([, v]) => v);
 ---
-<Base title={work.title} description={work.summary || undefined}>
+<Base title={work.title} description={work.summary || undefined} image={work.status === 'published' && work.imageFile ? `/media/images/${work.imageFile}` : null}>
   <p><a href={info.path}>← 回到{info.label}</a></p>
   {work.status === 'draft' && <p class="notice">這是草稿，只有你看得到。</p>}
   <h1>{work.title}</h1>
