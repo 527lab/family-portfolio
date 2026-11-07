@@ -22,7 +22,7 @@ const msg = ({ saved: '已儲存', deleted: '已刪除' } as Record<string, stri
   <h1>我的作品</h1>
   <p>
     你好，{user.displayName}（{user.role === 'admin' ? '管理員' : '創作者'}）。
-    <a href="/studio/new/">＋ 新增作品</a>
+    <a href="/studio/new/">＋ 新增作品</a> ・ <a href="/studio/settings/">個人設定</a>
     {user.role === 'admin' && <> ・ <a href="/studio/admin/">管理帳號與邀請碼</a></>}
   </p>
   <form method="post" action="/logout"><button type="submit" class="link">登出</button></form>

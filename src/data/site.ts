@@ -1,7 +1,5 @@
-// 網站基本設定。只使用暱稱，請勿填真實姓名、學校、電話、住址等個資。
+// 網站基本設定。暱稱不寫在這裡：由創作者帳號的「暱稱」決定（見 src/server/auth.ts 的 getSiteOwnerName）。
 export const site = {
-  nickname: '小禾',
-  title: '小禾的作品集',
   tagline: '畫畫、拍照、彈琴，用不同的方式記錄生活。',
   // 預設不讓搜尋引擎收錄；正式要公開時，建置時設 NOINDEX=false
   noindex: (process.env.NOINDEX ?? 'true') !== 'false',
@@ -12,6 +10,8 @@ export const site = {
     { href: '/piano/', label: '鋼琴' },
   ],
 };
+
+export const siteTitle = (name: string) => `${name}的作品集`;
 
 export const categoryInfo = {
   painting: { label: '畫作', path: '/painting/', intro: '水彩、素描與壓克力作品。' },

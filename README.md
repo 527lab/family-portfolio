@@ -1,6 +1,6 @@
 # 家人作品集網站
 
-升學面試用的作品集（畫作、攝影、鋼琴、自我介紹）。Astro（SSR）+ SQLite，創作者註冊登入後自己上傳與管理作品，訪客只能瀏覽公開作品。用 Docker 部署，經 Cloudflare Tunnel 對外。
+個人作品集（畫作、攝影、鋼琴演奏影片、檢定證書、自我介紹）。Astro（SSR）+ SQLite，創作者註冊登入後自己上傳與管理作品，訪客只能瀏覽公開作品。用 Docker 部署，經 Cloudflare Tunnel 對外。
 規格、權限與安全設計見 [docs/spec.md](docs/spec.md)。
 
 > 網站只使用暱稱，請勿放入真名或其他個資。
@@ -38,10 +38,10 @@ npm run user -- create-admin admin 管理員
 
 ## 家人怎麼用
 
-1. 向 David 拿邀請碼，開 `/register/` 註冊（帳號、暱稱、密碼至少 10 字元）。
+1. 向 David 拿邀請碼，開 `/register/` 註冊（帳號、暱稱、密碼至少 10 字元）。暱稱會顯示在網站上，之後可到 `/studio/settings/` 修改。
 2. 登入後進「創作者後台」→「新增作品」：選分類、填名稱與說明、選圖片（手機原圖即可，會自動縮圖）；鋼琴演奏可上傳影片或貼 YouTube 不公開連結。
 3. 狀態先選「草稿」確認沒問題，再改「公開」。後台可用 ↑↓ 調整順序。
-4. 證書請先遮蔽姓名、證號、學校等資訊再上傳。
+4. 證書請先遮蔽姓名、證號、校名等資訊再上傳。
 
 ## 設定（環境變數，見 `.env.example`）
 
@@ -61,7 +61,7 @@ npm run user -- create-admin admin 管理員
 src/pages/            公開頁、登入／註冊、studio/（後台）、media/（檔案服務）
 src/server/           資料庫、帳號與 session、作品、上傳處理（可獨立測試）
 src/middleware.ts     登入檢查與安全標頭
-src/data/             暱稱、標題、關於我
+src/data/             標語、導覽、關於我（站上暱稱取自創作者帳號）
 scripts/user.ts       伺服器上的帳號管理指令
 tests/                unit（單元）、e2e（端對端）
 Dockerfile / docker-compose.yml

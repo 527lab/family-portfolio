@@ -36,7 +36,7 @@ if (mode !== 'closed' && Astro.request.method === 'POST') {
       <form method="post" class="form narrow">
         {mode === 'invite' && <label>邀請碼<input name="invite" required autocomplete="off" maxlength="40" /></label>}
         <label>帳號（英數字與底線，3–20 字）<input name="username" value={v.username} required maxlength="20" autocomplete="username" /></label>
-        <label>顯示名稱（暱稱）<input name="display_name" value={v.displayName} required maxlength="20" /></label>
+        <label>暱稱（必填，會顯示在網站上，之後可修改）<input name="display_name" value={v.displayName} required maxlength="20" /></label>
         <label>密碼（至少 10 字元）<input type="password" name="password" required minlength="10" maxlength="128" autocomplete="new-password" /></label>
         <label>再輸入一次密碼<input type="password" name="password2" required minlength="10" maxlength="128" autocomplete="new-password" /></label>
         <button type="submit">註冊</button>

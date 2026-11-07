@@ -29,7 +29,7 @@ export function validatePassword(p: string): string | null {
   return null;
 }
 export function validateDisplayName(n: string): string | null {
-  return n.length >= 1 && n.length <= 20 ? null : '顯示名稱（暱稱）需為 1–20 個字，請勿使用真名';
+  return n.trim().length >= 1 && n.length <= 20 ? null : '顯示名稱（暱稱）需為 1–20 個字，請勿使用真名';
 }
 
 // ---------- 密碼雜湊（argon2id，套件預設參數）----------
@@ -79,6 +79,21 @@ export function getUserByName(username: string): User | null {
 }
 export function listUsers(): User[] {
   return getDb().prepare('SELECT * FROM users ORDER BY id').all().map(toUser);
+}
+
+// 網站公開顯示的暱稱＝最早建立且啟用中的創作者帳號；尚無帳號時用中性文字
+export const NEUTRAL_NAME = '創作者';
+export function getSiteOwnerName(): string {
+  const r: any = getDb()
+    .prepare("SELECT display_name FROM users WHERE role = 'creator' AND status = 'active' ORDER BY id LIMIT 1")
+    .get();
+  return r?.display_name ?? NEUTRAL_NAME;
+}
+
+export function setDisplayName(userId: number, displayName: string) {
+  const err = validateDisplayName(displayName);
+  if (err) throw new AuthError(err);
+  getDb().prepare('UPDATE users SET display_name = ? WHERE id = ?').run(displayName, userId);
 }
 
 export async function setPassword(userId: number, password: string) {
