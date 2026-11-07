@@ -35,7 +35,7 @@ const label: Record<Status, string> = { active: '啟用', pending: '待核准', 
 
   <h2>邀請碼</h2>
   <form method="post"><input type="hidden" name="action" value="invite" /><button type="submit">產生新的邀請碼（7 天內有效、限用一次）</button></form>
-  {code && <p class="ok">新邀請碼：<code class="code">{code}</code><br /><small>只會顯示這一次，請現在複製給家人。</small></p>}
+  {code && <p class="ok" role="status">新邀請碼：<code class="code">{code}</code><br /><small>只會顯示這一次，請現在複製給家人。</small></p>}
   <table>
     <thead><tr><th>建立時間</th><th>到期</th><th>狀態</th></tr></thead>
     <tbody>

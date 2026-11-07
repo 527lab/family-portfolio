@@ -27,8 +27,8 @@ if (mode !== 'closed' && Astro.request.method === 'POST') {
 <Base title="創作者註冊">
   <h1>創作者註冊</h1>
   {mode === 'closed' && <p>目前不開放註冊。需要帳號請聯絡管理員。</p>}
-  {mode !== 'closed' && done === 'active' && <p class="ok">註冊完成！<a href="/login/">前往登入</a></p>}
-  {mode !== 'closed' && done === 'pending' && <p class="ok">已送出申請。管理員核准後就可以登入。</p>}
+  {mode !== 'closed' && done === 'active' && <p class="ok" role="status">註冊完成！<a href="/login/">前往登入</a></p>}
+  {mode !== 'closed' && done === 'pending' && <p class="ok" role="status">已送出申請。管理員核准後就可以登入。</p>}
   {mode !== 'closed' && !done && (
     <>
       <p>{mode === 'invite' ? '需要管理員給你的邀請碼。' : '送出後需要管理員核准才能登入。'}請使用暱稱，不要填真實姓名。</p>

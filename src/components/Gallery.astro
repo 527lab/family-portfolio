@@ -1,7 +1,7 @@
 ---
 import type { Work } from '../server/works';
 import WorkCard from './WorkCard.astro';
-interface Props { works: Work[] }
-const { works } = Astro.props;
+interface Props { works: Work[]; level?: 2 | 3 }
+const { works, level = 3 } = Astro.props;
 ---
-{works.length === 0 ? <p>作品整理中，敬請期待。</p> : <div class="grid">{works.map((w) => <WorkCard work={w} />)}</div>}
+{works.length === 0 ? <p>作品整理中，敬請期待。</p> : <div class="grid">{works.map((w) => <WorkCard work={w} level={level} />)}</div>}
