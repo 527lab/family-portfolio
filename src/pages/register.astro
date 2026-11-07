@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { AuthError, register } from '../server/auth';
 import { config } from '../server/config';
+import { clientIp } from '../server/http';
 
 if (Astro.locals.user) return Astro.redirect('/studio/');
 const mode = config().registration;
@@ -15,7 +16,7 @@ if (mode !== 'closed' && Astro.request.method === 'POST') {
   const pw = String(form.get('password') ?? '');
   try {
     if (pw !== String(form.get('password2') ?? '')) throw new AuthError('兩次輸入的密碼不一樣');
-    const u = await register({ ...v, password: pw, inviteCode: String(form.get('invite') ?? '') });
+    const u = await register({ ...v, password: pw, inviteCode: String(form.get('invite') ?? '') }, clientIp(Astro.request, Astro.clientAddress));
     done = u.status === 'pending' ? 'pending' : 'active';
   } catch (e) {
     if (!(e instanceof AuthError)) throw e;

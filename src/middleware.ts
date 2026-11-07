@@ -2,6 +2,9 @@ import { defineMiddleware } from 'astro:middleware';
 import { getSessionUser } from './server/auth.ts';
 import { site } from './data/site';
 import { SESSION_COOKIE } from './server/http.ts';
+import { configWarnings } from './server/config.ts';
+
+if (import.meta.env.PROD) for (const m of configWarnings()) console.warn(m);
 
 const CSP = [
   "default-src 'self'",

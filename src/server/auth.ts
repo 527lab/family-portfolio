@@ -113,7 +113,7 @@ export function setUserStatus(actor: User, userId: number, status: Status) {
 // ---------- 登入失敗限流（記憶體；重啟即清空）----------
 const attempts = new Map<string, { count: number; first: number }>();
 const WINDOW = 15 * 60_000;
-const LIMITS = { user: 5, ip: 20 };
+const LIMITS = { user: 5, ip: 20, register: 10 };
 
 export function resetRateLimit() {
   attempts.clear();
@@ -127,10 +127,22 @@ function limited(key: string, max: number) {
   }
   return a.count >= max;
 }
+// 計數表上限：攻擊者用大量不同帳號／IP 灌入時，不讓記憶體無限增長
+const MAX_KEYS = 10_000;
+function prune() {
+  for (const [k, v] of attempts) if (now() - v.first > WINDOW) attempts.delete(k);
+  // 仍超過上限就淘汰最舊的（Map 依插入順序）
+  for (const k of attempts.keys()) {
+    if (attempts.size < MAX_KEYS) break;
+    attempts.delete(k);
+  }
+}
 function fail(key: string) {
   const a = attempts.get(key);
-  if (!a || now() - a.first > WINDOW) attempts.set(key, { count: 1, first: now() });
-  else a.count++;
+  if (!a || now() - a.first > WINDOW) {
+    if (attempts.size >= MAX_KEYS) prune();
+    attempts.set(key, { count: 1, first: now() });
+  } else a.count++;
 }
 
 export type LoginResult =
@@ -205,9 +217,13 @@ export async function register(input: {
   displayName: string;
   password: string;
   inviteCode?: string;
-}): Promise<User> {
+}, ip = 'unknown'): Promise<User> {
   const mode = config().registration;
   if (mode === 'closed') throw new AuthError('目前不開放註冊');
+  // 同一個來源 IP 15 分鐘內最多送 10 次（不論成功失敗），避免灌大量待核准帳號或猜邀請碼
+  const rk = `reg:${ip}`;
+  if (limited(rk, LIMITS.register)) throw new AuthError('嘗試次數過多，請 15 分鐘後再試');
+  fail(rk);
   const err = validateUsername(input.username) ?? validateDisplayName(input.displayName) ?? validatePassword(input.password);
   if (err) throw new AuthError(err);
   const ph = await hashPassword(input.password);

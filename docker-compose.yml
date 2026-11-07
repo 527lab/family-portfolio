@@ -22,7 +22,7 @@ services:
 
   # 反向代理：上傳大小上限、影片 Range、X-Robots-Tag。非 root 版本的 nginx，監聽 8080
   nginx:
-    image: nginxinc/nginx-unprivileged:1.27-alpine
+    image: nginxinc/nginx-unprivileged:1.28-alpine
     restart: unless-stopped
     depends_on:
       web:

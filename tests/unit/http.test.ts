@@ -40,3 +40,12 @@ describe('clientIp（限流用來源 IP）', () => {
     expect(clientIp(req())).toBe('unknown');
   });
 });
+
+describe('configWarnings', () => {
+  it('https 但沒設 TRUST_PROXY 時警告；設了或本機開發時不警告', async () => {
+    const { configWarnings } = await import('../../src/server/config.ts');
+    expect(configWarnings({ SITE_URL: 'https://a.example.com' }).length).toBe(1);
+    expect(configWarnings({ SITE_URL: 'https://a.example.com', TRUST_PROXY: 'true' })).toEqual([]);
+    expect(configWarnings({ SITE_URL: 'http://localhost:8080' })).toEqual([]);
+  });
+});

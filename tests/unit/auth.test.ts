@@ -152,3 +152,14 @@ describe('網站暱稱', () => {
     expect(() => setDisplayName(c.id, 'x'.repeat(21))).toThrow(AuthError);
   });
 });
+
+describe('註冊限流', () => {
+  const reg = (username: string, ip: string) =>
+    register({ username, displayName: '新朋友', password: PASSWORD, inviteCode: 'wrong' }, ip);
+
+  it('同一 IP 送出 10 次後被擋，換 IP 不受影響', async () => {
+    for (let i = 0; i < 10; i++) await expect(reg(`user${i}`, '1.1.1.1')).rejects.toThrow('邀請碼');
+    await expect(reg('user99', '1.1.1.1')).rejects.toThrow('嘗試次數過多');
+    await expect(reg('user99', '2.2.2.2')).rejects.toThrow('邀請碼');
+  });
+});
