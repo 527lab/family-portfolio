@@ -116,6 +116,16 @@ describe('未登入', () => {
     }
     expect(await (await c.req('/robots.txt')).text()).toContain('Disallow: /');
   });
+
+  it('無障礙：每頁有「跳到主要內容」連結與對應的 main#main，且 html 有 lang', async () => {
+    const c = new Client();
+    for (const p of ['/', '/painting/', '/login/']) {
+      const html = await (await c.req(p)).text();
+      expect(html, p).toContain('href="#main"');
+      expect(html, p).toMatch(/<main[^>]*id="main"/);
+      expect(html, p).toContain('lang="zh-Hant"');
+    }
+  });
 });
 
 describe('未登入（補充）', () => {
