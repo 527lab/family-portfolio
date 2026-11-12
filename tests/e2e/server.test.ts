@@ -352,6 +352,30 @@ describe('創作者上傳與權限', () => {
     expect(await page.text()).not.toContain('<video');
   });
 
+  it('關於我：創作者在個人設定填寫儲存後，前台 /about/ 顯示（HTML 會被跳脫）', async () => {
+    const before = await (await fetch(base + '/about/')).text();
+    expect(before).toContain('示範的假資料'); // 還沒填時顯示預設範例
+    const page = await (await alice.req('/studio/settings/')).text();
+    expect(page).toContain('name="about"');
+    expect(page).not.toMatch(/<textarea[^>]*(disabled|readonly)/);
+    const res = await alice.post('/studio/settings/', { action: 'about', about: '我喜歡畫畫。\r\n也喜歡彈琴。\r\n\r\n<b>第二段</b>' });
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toContain('ok=about');
+    const html = await (await fetch(base + '/about/')).text();
+    expect(html).toContain('<p>我喜歡畫畫。<br>也喜歡彈琴。</p>');
+    expect(html).toContain('&lt;b&gt;第二段&lt;/b&gt;');
+    expect(html).not.toContain('示範的假資料');
+    // 再次開啟設定頁會帶出已儲存的內容
+    expect(await (await alice.req('/studio/settings/')).text()).toContain('也喜歡彈琴。');
+    // 過長被拒絕，前台內容不變
+    const long = await alice.post('/studio/settings/', { action: 'about', about: 'x'.repeat(5001) });
+    expect(long.status).toBe(400);
+    expect(await (await fetch(base + '/about/')).text()).toContain('也喜歡彈琴。');
+    // 改暱稱不會動到關於我
+    expect((await alice.post('/studio/settings/', { display_name: 'alice' })).status).toBe(303);
+    expect(await (await fetch(base + '/about/')).text()).toContain('也喜歡彈琴。');
+  });
+
   it('創作者不能進帳號管理頁，管理員可以', async () => {
     expect((await alice.req('/studio/admin/')).status).toBe(403);
     expect((await boss.req('/studio/admin/')).status).toBe(200);
