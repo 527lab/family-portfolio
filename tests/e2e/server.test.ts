@@ -322,6 +322,14 @@ describe('創作者上傳與權限', () => {
     expect(page).not.toContain('og:image');
   });
 
+  it('上傳圖片欄位：accept="image/*" 且不加 capture（手機可從相簿或相機選取）', async () => {
+    const html = await (await alice.req('/studio/new/')).text();
+    const input = html.match(/<input[^>]*name="image"[^>]*>/)?.[0] ?? '';
+    expect(input).toContain('type="file"');
+    expect(input).toContain('accept="image/*"');
+    expect(input).not.toContain('capture');
+  });
+
   it('精選置頂：後台一鍵設為精選後，公開頁與後台立即排在最上面；別人不能切換', async () => {
     await alice.post('/studio/new/', await workBody({ title: '舊作品X' }));
     await alice.post('/studio/new/', await workBody({ title: '新作品Y' }));

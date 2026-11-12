@@ -28,6 +28,11 @@ const newId = () => randomBytes(16).toString('hex');
  */
 export async function saveImage(file: File): Promise<{ image: string; thumb: string }> {
   const max = config().maxImageBytes;
+  // iPhone／部分 Android 相簿的 HEIC 照片（有些瀏覽器不給類型，只能看副檔名）
+  const untyped = !file.type || file.type === 'application/octet-stream';
+  if (/^image\/hei[cf]/.test(file.type) || (untyped && /\.hei[cf]$/i.test(file.name))) {
+    throw new UploadError('不支援 HEIC 格式：請把手機相機格式改成「最相容」（JPG），或先轉成 JPG 再上傳');
+  }
   if (!IMAGE_TYPES.has(file.type)) throw new UploadError('圖片只接受 JPG、PNG、WebP');
   if (file.size === 0) throw new UploadError('圖片檔案是空的');
   if (file.size > max) throw new UploadError(`圖片不可超過 ${Math.round(max / 1048576)} MB`);

@@ -24,7 +24,9 @@ const today = new Date().toISOString().slice(0, 10);
   <fieldset>
     <legend>圖片（JPG／PNG／WebP，會自動縮圖並移除 EXIF）</legend>
     {work?.thumbFile && <p><img class="thumb" src={`/media/thumbs/${work.thumbFile}`} alt={work.alt} /><br /><small>已有圖片；選新檔案會取代它。</small></p>}
-    <label>選擇圖片（畫作、攝影、證書必填；鋼琴可當影片封面）<input type="file" name="image" accept="image/jpeg,image/png,image/webp" /></label>
+    <!-- accept="image/*"（不加 capture）：手機會出現「相簿／拍照／檔案」選單；只列特定格式時部分 Android 只開檔案總管 -->
+    <label>選擇圖片（畫作、攝影、證書必填；鋼琴可當影片封面）<input type="file" name="image" accept="image/*" /></label>
+    <p class="hint">手機點「選擇圖片」可直接從相簿挑選或現場拍照。</p>
     <label>圖片文字說明（給視障者與圖片載入失敗時使用）<input name="alt" value={v('alt', work?.alt)} maxlength="120" /></label>
     <p class="hint">證書請先遮蔽姓名、證號、校名等個資再上傳。</p>
   </fieldset>
