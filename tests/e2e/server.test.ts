@@ -339,6 +339,60 @@ describe('創作者上傳與權限', () => {
     expect(order(await (await fetch(base + '/painting/')).text())).toBe(false);
   });
 
+  it('影片預設「不放影片」：新作品頁預設選取，不選影片可直接儲存', async () => {
+    const html = await (await alice.req('/studio/new/')).text();
+    expect(html).toMatch(/<input[^>]*value="none"[^>]*checked/);
+    expect(html).not.toMatch(/<input[^>]*value="file"[^>]*checked/);
+    const res = await alice.post('/studio/new/', await workBody({ title: '沒有影片的演奏草稿', category: 'piano', status: 'draft', video_mode: 'none' }));
+    expect(res.status).toBe(303);
+    const w = works.listForStudio(auth.getUserByName('alice')!).find((x) => x.title === '沒有影片的演奏草稿')!;
+    expect(w.videoFile).toBeNull();
+    // 已有影片的作品編輯時預設保留原設定（不會被改成不放影片）
+    const yt = works.listForStudio(auth.getUserByName('alice')!).find((x) => x.youtubeId)!;
+    const edit = await (await alice.req(`/studio/works/${yt.id}/`)).text();
+    expect(edit).toMatch(/<input[^>]*value="youtube"[^>]*checked/);
+    expect(edit).not.toMatch(/<input[^>]*value="none"[^>]*checked/);
+  });
+
+  it('鋼琴演奏不放影片也能公開，公開頁看得到', async () => {
+    const res = await alice.post('/studio/new/', {
+      category: 'piano', title: '沒有影片的公開演奏', date: '2025-06-04', status: 'published', video_mode: 'none',
+    });
+    expect(res.status).toBe(303);
+    const w = works.listPublic({ categories: ['piano'] }).find((x) => x.title === '沒有影片的公開演奏')!;
+    expect(w.status).toBe('published');
+    expect(w.videoFile).toBeNull();
+    expect(w.youtubeId).toBeNull();
+    expect(await (await fetch(`${base}/piano/`)).text()).toContain('沒有影片的公開演奏');
+    const page = await fetch(`${base}/works/${w.id}/`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).not.toContain('<video');
+  });
+
+  it('關於我：創作者在個人設定填寫儲存後，前台 /about/ 顯示（HTML 會被跳脫）', async () => {
+    const before = await (await fetch(base + '/about/')).text();
+    expect(before).toContain('示範的假資料'); // 還沒填時顯示預設範例
+    const page = await (await alice.req('/studio/settings/')).text();
+    expect(page).toContain('name="about"');
+    expect(page).not.toMatch(/<textarea[^>]*(disabled|readonly)/);
+    const res = await alice.post('/studio/settings/', { action: 'about', about: '我喜歡畫畫。\r\n也喜歡彈琴。\r\n\r\n<b>第二段</b>' });
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toContain('ok=about');
+    const html = await (await fetch(base + '/about/')).text();
+    expect(html).toContain('<p>我喜歡畫畫。<br>也喜歡彈琴。</p>');
+    expect(html).toContain('&lt;b&gt;第二段&lt;/b&gt;');
+    expect(html).not.toContain('示範的假資料');
+    // 再次開啟設定頁會帶出已儲存的內容
+    expect(await (await alice.req('/studio/settings/')).text()).toContain('也喜歡彈琴。');
+    // 過長被拒絕，前台內容不變
+    const long = await alice.post('/studio/settings/', { action: 'about', about: 'x'.repeat(5001) });
+    expect(long.status).toBe(400);
+    expect(await (await fetch(base + '/about/')).text()).toContain('也喜歡彈琴。');
+    // 改暱稱不會動到關於我
+    expect((await alice.post('/studio/settings/', { display_name: 'alice' })).status).toBe(303);
+    expect(await (await fetch(base + '/about/')).text()).toContain('也喜歡彈琴。');
+  });
+
   it('創作者不能進帳號管理頁，管理員可以', async () => {
     expect((await alice.req('/studio/admin/')).status).toBe(403);
     expect((await boss.req('/studio/admin/')).status).toBe(200);

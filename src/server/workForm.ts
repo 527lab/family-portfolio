@@ -17,6 +17,11 @@ export function bodyTooLarge(request: Request) {
  * 失敗時會把這次剛存的檔案清掉，不留孤兒檔。
  */
 export async function submitWork(actor: User, form: FormData, existing?: Work): Promise<{ work?: Work; errors: string[] }> {
+  // 影片預設「不放影片」：原本沒有影片的作品，若選了影片檔或貼了連結卻忘了切換選項，就照使用者實際填的處理
+  if (form.get('video_mode') === 'none' && !existing?.videoFile && !existing?.youtubeId) {
+    if (isFile(form.get('video'))) form.set('video_mode', 'file');
+    else if (String(form.get('youtube') ?? '').trim()) form.set('video_mode', 'youtube');
+  }
   const { input, errors } = parseWorkForm(form);
   const saved: WorkFiles = {};
   const cleanup = () => removeFiles(saved).catch(() => {});

@@ -1,5 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 import { Content } from '../data/about.md';
+import { getSiteAbout, toParagraphs } from '../server/profile';
+// 創作者在「個人設定」填的關於我；還沒填時顯示預設範例（src/data/about.md）
+const paragraphs = toParagraphs(getSiteAbout());
 ---
-<Base title="關於我"><h1>關於我</h1><article class="prose"><Content /></article></Base>
+<Base title="關於我"><h1>關於我</h1><article class="prose">
+  {paragraphs.length > 0
+    ? paragraphs.map((lines) => <p>{lines.map((l, i) => <>{i > 0 && <br />}{l}</>)}</p>)
+    : <Content />}
+</article></Base>

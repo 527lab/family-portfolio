@@ -83,11 +83,14 @@ export function listUsers(): User[] {
 
 // 網站公開顯示的暱稱＝最早建立且啟用中的創作者帳號；尚無帳號時用中性文字
 export const NEUTRAL_NAME = '創作者';
+/** 網站主人（最早建立且啟用中的創作者）的帳號編號；尚無時為 null。 */
+export function getSiteOwnerId(): number | null {
+  const r: any = getDb().prepare("SELECT id FROM users WHERE role = 'creator' AND status = 'active' ORDER BY id LIMIT 1").get();
+  return r?.id ?? null;
+}
 export function getSiteOwnerName(): string {
-  const r: any = getDb()
-    .prepare("SELECT display_name FROM users WHERE role = 'creator' AND status = 'active' ORDER BY id LIMIT 1")
-    .get();
-  return r?.display_name ?? NEUTRAL_NAME;
+  const id = getSiteOwnerId();
+  return (id !== null && getUserById(id)?.displayName) || NEUTRAL_NAME;
 }
 
 export function setDisplayName(userId: number, displayName: string) {

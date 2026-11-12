@@ -5,7 +5,8 @@ const { work, values = {}, errors = [] } = Astro.props;
 // 重新顯示表單時優先用使用者剛填的值，否則用既有作品
 const v = (k: string, fallback = '') => values[k] ?? fallback;
 const cat = v('category', work?.category ?? 'painting');
-const videoMode = v('video_mode', work?.youtubeId ? 'youtube' : work?.videoFile ? 'keep' : 'file');
+// 預設「不放影片」；已有影片的作品預設保留原本的影片
+const videoMode = v('video_mode', work?.youtubeId ? 'youtube' : work?.videoFile ? 'keep' : 'none');
 const today = new Date().toISOString().slice(0, 10);
 ---
 {errors.length > 0 && <ul class="error" role="alert">{errors.map((e) => <li>{e}</li>)}</ul>}
@@ -29,15 +30,15 @@ const today = new Date().toISOString().slice(0, 10);
   </fieldset>
 
   <fieldset>
-    <legend>影片（鋼琴演奏）</legend>
+    <legend>影片（鋼琴演奏，選填）</legend>
+    <label class="inline"><input type="radio" name="video_mode" value="none" checked={videoMode === 'none'} /> 不放影片</label>
+    {work && (work.videoFile || work.youtubeId) && (
+      <label class="inline"><input type="radio" name="video_mode" value="keep" checked={videoMode === 'keep'} /> 保留目前的影片</label>
+    )}
     <label class="inline"><input type="radio" name="video_mode" value="file" checked={videoMode === 'file'} /> 上傳影片檔（MP4／WebM，200 MB 內）</label>
     <input type="file" name="video" accept="video/mp4,video/webm" />
     <label class="inline"><input type="radio" name="video_mode" value="youtube" checked={videoMode === 'youtube'} /> 貼 YouTube 不公開連結</label>
     <input name="youtube" value={v('youtube', work?.youtubeId ? `https://youtu.be/${work.youtubeId}` : '')} placeholder="https://youtu.be/…" maxlength="200" />
-    {work && (work.videoFile || work.youtubeId) && (
-      <label class="inline"><input type="radio" name="video_mode" value="keep" checked={videoMode === 'keep'} /> 保留目前的影片</label>
-    )}
-    <label class="inline"><input type="radio" name="video_mode" value="none" checked={videoMode === 'none'} /> 不放影片</label>
   </fieldset>
 
   <fieldset>
