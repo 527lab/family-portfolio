@@ -3,7 +3,7 @@ import { makeDataDir, PASSWORD } from '../helpers';
 import { createUser, type User } from '../../src/server/auth.ts';
 import { closeDb } from '../../src/server/db.ts';
 import {
-  canManage, createWork, deleteWork, ForbiddenError, getWork, listForStudio, listPublic, moveWork,
+  canManage, createWork, deleteWork, ForbiddenError, getWork, listForStudio, listPublic, moveWork, setFeatured,
   parseWorkForm, updateWork, ValidationError, type WorkInput,
 } from '../../src/server/works.ts';
 import { submitWork } from '../../src/server/workForm.ts';
@@ -108,6 +108,48 @@ describe('排序', () => {
     moveWork(alice, a.id, 'up'); // 已在最前面，不變
     expect(titles()).toEqual(['一', '三', '二']);
     void b;
+  });
+});
+
+describe('精選置頂', () => {
+  it('精選作品固定在最上面（公開頁與後台），其餘照原本排序；取消後立即回到原位', () => {
+    const a = createWork(alice, input({ title: '一', status: 'published' }), img);
+    const b = createWork(alice, input({ title: '二', status: 'published' }), img);
+    const c = createWork(alice, input({ title: '三', status: 'published' }), img);
+    const pub = () => listPublic({ categories: ['painting'] }).map((w) => w.title);
+    const studio = () => listForStudio(alice).map((w) => w.title);
+    expect(pub()).toEqual(['三', '二', '一']);
+    setFeatured(alice, a.id, true);
+    expect(pub()).toEqual(['一', '三', '二']);
+    expect(studio()).toEqual(['一', '三', '二']);
+    expect(listPublic({ featured: true }).map((w) => w.title)).toEqual(['一']);
+    setFeatured(alice, b.id, true);
+    // 多個精選之間：依後台排序（新作品在前，可用 ↑↓ 調整）
+    expect(pub()).toEqual(['二', '一', '三']);
+    moveWork(alice, a.id, 'up');
+    expect(pub()).toEqual(['一', '二', '三']);
+    setFeatured(alice, a.id, false);
+    expect(pub()).toEqual(['二', '三', '一']);
+    void c;
+  });
+
+  it('↑↓ 只在同一組（精選／一般）內移動，一般作品不會跑到精選上面', () => {
+    const a = createWork(alice, input({ title: '一', status: 'published' }), img);
+    const b = createWork(alice, input({ title: '二', status: 'published', featured: true }), img);
+    const titles = () => listPublic().map((w) => w.title);
+    expect(titles()).toEqual(['二', '一']);
+    moveWork(alice, a.id, 'up'); // 一般組的第一個，不能再上移
+    expect(titles()).toEqual(['二', '一']);
+    moveWork(alice, b.id, 'down'); // 精選組只有一個
+    expect(titles()).toEqual(['二', '一']);
+  });
+
+  it('只有作者與管理員能切換精選', () => {
+    const w = createWork(alice, input(), img);
+    expect(() => setFeatured(bob, w.id, true)).toThrow(ForbiddenError);
+    expect(getWork(w.id)?.featured).toBe(false);
+    setFeatured(admin, w.id, true);
+    expect(getWork(w.id)?.featured).toBe(true);
   });
 });
 

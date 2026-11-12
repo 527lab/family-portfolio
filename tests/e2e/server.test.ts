@@ -322,6 +322,23 @@ describe('創作者上傳與權限', () => {
     expect(page).not.toContain('og:image');
   });
 
+  it('精選置頂：後台一鍵設為精選後，公開頁與後台立即排在最上面；別人不能切換', async () => {
+    await alice.post('/studio/new/', await workBody({ title: '舊作品X' }));
+    await alice.post('/studio/new/', await workBody({ title: '新作品Y' }));
+    const x = works.listPublic().find((w) => w.title === '舊作品X')!;
+    const order = (html: string) => html.indexOf('舊作品X') < html.indexOf('新作品Y');
+    expect(order(await (await fetch(base + '/painting/')).text())).toBe(false);
+    expect((await bobby.post('/studio/', { id: String(x.id), feature: '1' })).status).toBe(403);
+    const res = await alice.post('/studio/', { id: String(x.id), feature: '1' });
+    expect(res.status).toBe(303);
+    expect(order(await (await fetch(base + '/painting/')).text())).toBe(true);
+    const studio = await (await alice.req('/studio/')).text();
+    expect(order(studio)).toBe(true);
+    expect(studio).toContain('取消精選 舊作品X');
+    expect((await alice.post('/studio/', { id: String(x.id), feature: '0' })).status).toBe(303);
+    expect(order(await (await fetch(base + '/painting/')).text())).toBe(false);
+  });
+
   it('創作者不能進帳號管理頁，管理員可以', async () => {
     expect((await alice.req('/studio/admin/')).status).toBe(403);
     expect((await boss.req('/studio/admin/')).status).toBe(200);

@@ -47,7 +47,8 @@ export class ValidationError extends Error {
 }
 
 const SELECT = `SELECT w.*, u.display_name AS owner_name FROM works w JOIN users u ON u.id = w.owner_id`;
-const ORDER = `ORDER BY w.sort_order ASC, w.date DESC, w.id DESC`;
+// 精選作品固定在最上面；精選之間、一般作品之間各自依後台 ↑↓ 的排序
+const ORDER = `ORDER BY w.featured DESC, w.sort_order ASC, w.date DESC, w.id DESC`;
 
 const toWork = (r: any): Work => ({
   id: r.id, ownerId: r.owner_id, ownerName: r.owner_name, category: r.category, title: r.title,
@@ -229,18 +230,27 @@ export function deleteWork(actor: User, id: number): WorkFiles {
   return { image: w.imageFile, thumb: w.thumbFile, video: w.videoFile };
 }
 
-/** 在「同擁有者、同分類」的列表中上移／下移一格（與鄰居交換排序值）。 */
+/** 在「同擁有者、同分類、同為精選／非精選」的列表中上移／下移一格（與鄰居交換排序值）。 */
 export function moveWork(actor: User, id: number, dir: 'up' | 'down') {
   const w = getWork(id);
   assertCanManage(actor, w);
   const d = getDb();
-  const sibs = d.prepare(`SELECT id, sort_order FROM works WHERE owner_id = ? AND category = ? ORDER BY sort_order ASC, id DESC`).all(w.ownerId, w.category) as { id: number; sort_order: number }[];
+  const sibs = d
+    .prepare(`SELECT id, sort_order FROM works WHERE owner_id = ? AND category = ? AND featured = ? ORDER BY sort_order ASC, date DESC, id DESC`)
+    .all(w.ownerId, w.category, w.featured ? 1 : 0) as { id: number; sort_order: number }[];
   const i = sibs.findIndex((x) => x.id === id);
   const j = dir === 'up' ? i - 1 : i + 1;
   if (i < 0 || j < 0 || j >= sibs.length) return;
   const upd = d.prepare('UPDATE works SET sort_order = ? WHERE id = ?');
   upd.run(sibs[j].sort_order, sibs[i].id);
   upd.run(sibs[i].sort_order, sibs[j].id);
+}
+
+/** 切換精選（後台列表一鍵置頂／取消）。 */
+export function setFeatured(actor: User, id: number, featured: boolean) {
+  const w = getWork(id);
+  assertCanManage(actor, w);
+  getDb().prepare('UPDATE works SET featured = ?, updated_at = ? WHERE id = ?').run(featured ? 1 : 0, Date.now(), id);
 }
 
 /** 公開作品必須有媒體：影像類要有圖片；鋼琴演奏要有影片。草稿不檢查。 */
