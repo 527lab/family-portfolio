@@ -1,13 +1,15 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { categories, categoryLabels, listForStudio, moveWork, ForbiddenError } from '../../server/works';
+import { categories, categoryLabels, listForStudio, moveWork, setFeatured, ForbiddenError } from '../../server/works';
 
 const user = Astro.locals.user!;
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
-  const dir = form.get('dir') === 'up' ? 'up' : 'down';
+  const id = Number(form.get('id'));
+  const feature = form.get('feature');
   try {
-    moveWork(user, Number(form.get('id')), dir);
+    if (feature === '1' || feature === '0') setFeatured(user, id, feature === '1');
+    else moveWork(user, id, form.get('dir') === 'up' ? 'up' : 'down');
   } catch (e) {
     if (!(e instanceof ForbiddenError)) throw e;
     return new Response('沒有權限', { status: 403 });
@@ -33,9 +35,12 @@ const msg = ({ saved: '已儲存', deleted: '已刪除' } as Record<string, stri
     return list.length > 0 && (
       <section>
         <h2>{categoryLabels[c]}</h2>
-        <p class="hint">排序越上面，在公開頁越前面。</p>
+        <p class="hint">排序越上面，在公開頁越前面。標為「精選」的作品固定在最上面（精選之間也可用 ↑↓ 調整）。</p>
         <ul class="studio-list">
-          {list.map((w, i) => (
+          {list.map((w, i) => {
+            // ↑↓ 只在同一組（精選／一般）之間移動
+            const same = (o?: typeof w) => !!o && o.featured === w.featured;
+            return (
             <li>
               {w.thumbFile ? <img class="thumb" src={`/media/thumbs/${w.thumbFile}`} alt="" /> : <span class="thumb ph">{c === 'piano' ? '🎹' : '🖼️'}</span>}
               <span class="grow">
@@ -46,11 +51,13 @@ const msg = ({ saved: '已儲存', deleted: '已刪除' } as Record<string, stri
               </span>
               <form method="post" class="inline-form">
                 <input type="hidden" name="id" value={w.id} />
-                <button name="dir" value="up" disabled={i === 0} aria-label={`上移 ${w.title}`}>↑</button>
-                <button name="dir" value="down" disabled={i === list.length - 1} aria-label={`下移 ${w.title}`}>↓</button>
+                <button name="feature" value={w.featured ? '0' : '1'} aria-label={`${w.featured ? '取消精選' : '設為精選'} ${w.title}`}>{w.featured ? '★ 取消精選' : '☆ 精選'}</button>
+                <button name="dir" value="up" disabled={!same(list[i - 1])} aria-label={`上移 ${w.title}`}>↑</button>
+                <button name="dir" value="down" disabled={!same(list[i + 1])} aria-label={`下移 ${w.title}`}>↓</button>
               </form>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </section>
     );

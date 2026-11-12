@@ -58,6 +58,6 @@ const today = new Date().toISOString().slice(0, 10);
       <option value="published" selected={v('status', work?.status ?? 'draft') === 'published'}>公開</option>
     </select>
   </label>
-  <label class="inline"><input type="checkbox" name="featured" checked={values.featured ? values.featured === 'on' : work?.featured} /> 顯示在首頁精選</label>
+  <label class="inline"><input type="checkbox" name="featured" checked={values.featured ? values.featured === 'on' : work?.featured} /> 精選（在後台與作品頁置頂，並顯示在首頁）</label>
   <button type="submit">儲存</button>
 </form>
