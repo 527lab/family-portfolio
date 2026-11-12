@@ -1,33 +1,59 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { AuthError, setDisplayName, getUserById } from '../../server/auth';
+import { AuthError, setDisplayName, getUserById, getSiteOwnerId, getSiteOwnerName } from '../../server/auth';
+import { ABOUT_MAX, getAbout, setAbout } from '../../server/profile';
 
 const user = Astro.locals.user!;
 let error = '';
-let saved = Astro.url.searchParams.get('ok') === '1';
-let name = user.displayName;
+let aboutError = '';
+const ok = Astro.url.searchParams.get('ok');
+let name = getUserById(user.id)?.displayName ?? user.displayName;
+let about = getAbout(user.id);
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
-  name = String(form.get('display_name') ?? '').trim();
+  const isAbout = form.get('action') === 'about';
   try {
+    if (isAbout) {
+      about = String(form.get('about') ?? '');
+      setAbout(user.id, about);
+      return Astro.redirect('/studio/settings/?ok=about#about', 303);
+    }
+    name = String(form.get('display_name') ?? '').trim();
     setDisplayName(user.id, name);
     return Astro.redirect('/studio/settings/?ok=1', 303);
   } catch (e) {
     if (!(e instanceof AuthError)) throw e;
-    error = e.message;
+    if (isAbout) aboutError = e.message;
+    else error = e.message;
     Astro.response.status = 400;
   }
-} else {
-  name = getUserById(user.id)?.displayName ?? name;
 }
+// 前台「關於我」只顯示網站主人（最早建立的創作者）的介紹
+const ownerId = getSiteOwnerId();
+const isOwner = ownerId === user.id;
 ---
 <Base title="個人設定">
   <h1>個人設定</h1>
   <p><a href="/studio/">← 回到我的作品</a></p>
-  {saved && <p class="ok" role="status">已儲存</p>}
+  {ok === '1' && <p class="ok" role="status">已儲存</p>}
   {error && <p class="error" role="alert">{error}</p>}
   <form method="post" class="form narrow">
     <label>暱稱（顯示在網站上，1–20 字，請勿使用真名）<input name="display_name" value={name} required maxlength="20" /></label>
     <button type="submit">儲存</button>
+  </form>
+
+  <h2 id="about">關於我</h2>
+  {ok === 'about' && <p class="ok" role="status">已儲存「關於我」，<a href="/about/">到前台看看</a></p>}
+  {aboutError && <p class="error" role="alert">{aboutError}</p>}
+  <p class="hint">
+    {isOwner
+      ? <>會顯示在前台的 <a href="/about/">關於我</a> 頁。空一行代表分段；留白儲存會改回預設範例。</>
+      : <>前台「關於我」目前顯示的是 {getSiteOwnerName()} 的介紹；你填的內容會先保存下來。</>}
+    請勿寫真名、學校、電話、住址等個資。
+  </p>
+  <form method="post" class="form">
+    <input type="hidden" name="action" value="about" />
+    <label>自我介紹（{ABOUT_MAX} 字內）<textarea name="about" rows="12" maxlength={ABOUT_MAX}>{about}</textarea></label>
+    <button type="submit">儲存關於我</button>
   </form>
 </Base>
