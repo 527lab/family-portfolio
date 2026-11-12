@@ -7,7 +7,7 @@ import {
   parseWorkForm, updateWork, ValidationError, type WorkInput,
 } from '../../src/server/works.ts';
 import { submitWork } from '../../src/server/workForm.ts';
-import { pngFile } from '../helpers';
+import { mp4Bytes, pngFile } from '../helpers';
 
 let tmp: ReturnType<typeof makeDataDir>;
 let admin: User, alice: User, bob: User;
@@ -75,11 +75,26 @@ describe('公開／草稿', () => {
     expect(listPublic().map((w) => w.title)).toEqual(['公開']);
   });
 
-  it('沒有圖片不能公開；鋼琴要有影片或 YouTube 才能公開', () => {
+  it('沒有圖片不能公開（畫作、攝影、證書）', () => {
     expect(() => createWork(alice, input({ status: 'published' }), {})).toThrow(ValidationError);
-    expect(() => createWork(alice, input({ category: 'piano', status: 'published' }), img)).toThrow(ValidationError);
-    const w = createWork(alice, input({ category: 'piano', status: 'published', videoMode: 'youtube', youtubeId: 'abcdEFGhijk' }), {});
-    expect(w.youtubeId).toBe('abcdEFGhijk');
+    expect(() => createWork(alice, input({ category: 'photography', status: 'published' }), {})).toThrow(ValidationError);
+    expect(() => createWork(alice, input({ category: 'certificate', status: 'published' }), {})).toThrow(ValidationError);
+  });
+
+  it('鋼琴演奏公開時不必有影片（與草稿相同）', () => {
+    const noVideo = createWork(alice, input({ title: '沒影片有封面', category: 'piano', status: 'published' }), img);
+    expect(noVideo.status).toBe('published');
+    expect(noVideo.videoFile).toBeNull();
+    expect(noVideo.youtubeId).toBeNull();
+    const bare = createWork(alice, input({ title: '沒影片也沒圖', category: 'piano', status: 'published' }), {});
+    expect(bare.status).toBe('published');
+    expect(listPublic({ categories: ['piano'] }).map((w) => w.title).sort()).toEqual(['沒影片也沒圖', '沒影片有封面'].sort());
+    const yt = createWork(alice, input({ category: 'piano', status: 'published', videoMode: 'youtube', youtubeId: 'abcdEFGhijk' }), {});
+    expect(yt.youtubeId).toBe('abcdEFGhijk');
+  });
+
+  it('鋼琴演奏有圖片時，公開仍須填圖片文字說明', () => {
+    expect(() => createWork(alice, input({ category: 'piano', status: 'published', alt: '' }), img)).toThrow(ValidationError);
   });
 
   it('公開時必須有圖片文字說明', () => {
@@ -148,5 +163,36 @@ describe('submitWork（表單＋檔案整合）', () => {
     expect(r.work).toBeUndefined();
     expect(r.errors.length).toBeGreaterThan(0);
     expect(listForStudio(admin)).toHaveLength(0);
+  });
+});
+
+describe('影片預設「不放影片」', () => {
+  const piano = (o: Record<string, string | File> = {}) => {
+    const f = new FormData();
+    Object.entries({ category: 'piano', title: '練習曲', date: '2025-05-01', status: 'draft', video_mode: 'none', ...o }).forEach(([k, v]) => f.set(k, v));
+    return f;
+  };
+  const mp4 = () => new File([mp4Bytes()], 'a.mp4', { type: 'video/mp4' });
+
+  it('新作品不選影片可直接儲存，不會被要求填影片', async () => {
+    const r = await submitWork(alice, piano());
+    expect(r.errors).toEqual([]);
+    expect(r.work?.videoFile).toBeNull();
+    expect(r.work?.youtubeId).toBeNull();
+  });
+
+  it('沒切換選項但選了影片檔或貼了連結：照實際填的上傳／使用', async () => {
+    const a = await submitWork(alice, piano({ video: mp4() }));
+    expect(a.work?.videoFile).toMatch(/\.mp4$/);
+    const b = await submitWork(alice, piano({ youtube: 'https://youtu.be/abcdEFGhijk' }));
+    expect(b.work?.youtubeId).toBe('abcdEFGhijk');
+  });
+
+  it('已有影片的作品：保留原設定；明確選「不放影片」才移除', async () => {
+    const w = (await submitWork(alice, piano({ video_mode: 'youtube', youtube: 'https://youtu.be/abcdEFGhijk' }))).work!;
+    const kept = await submitWork(alice, piano({ video_mode: 'keep', title: '改名' }), w);
+    expect(kept.work?.youtubeId).toBe('abcdEFGhijk');
+    const removed = await submitWork(alice, piano({ youtube: 'https://youtu.be/abcdEFGhijk' }), kept.work!);
+    expect(removed.work?.youtubeId).toBeNull();
   });
 });

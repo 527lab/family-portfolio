@@ -243,13 +243,11 @@ export function moveWork(actor: User, id: number, dir: 'up' | 'down') {
   upd.run(sibs[i].sort_order, sibs[j].id);
 }
 
-/** 公開作品必須有媒體：影像類要有圖片；鋼琴演奏要有影片。草稿不檢查。 */
+/** 公開作品必須有媒體：畫作、攝影、證書要有圖片；鋼琴演奏的影片與圖片都是選填（與草稿相同）。草稿不檢查。 */
 function checkMedia(input: WorkInput, m: { image: string | null; video: string | null; youtube: string | null }) {
   if (input.status !== 'published') return;
   const errors: string[] = [];
-  if (input.category === 'piano') {
-    if (!m.video && !m.youtube) errors.push('鋼琴演奏要先上傳影片或貼 YouTube 連結才能公開（可先存成草稿）');
-  } else if (!m.image) {
+  if (input.category !== 'piano' && !m.image) {
     errors.push('要先上傳圖片才能公開（可先存成草稿）');
   }
   if (m.image && !input.alt) errors.push('請填寫圖片文字說明（給視障者與圖片載入失敗時使用）');
