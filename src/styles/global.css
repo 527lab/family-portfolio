@@ -45,8 +45,11 @@ button.link { background:none; color:var(--accent); padding:0; text-decoration:u
 .studio-list { list-style:none; padding:0; display:grid; gap:.5rem; }
 .studio-list li { display:flex; align-items:center; gap:.75rem; border:1px solid var(--line); border-radius:8px; padding:.5rem; background:#fff; }
 .grow { flex:1; }
-.thumb { width:64px; height:48px; object-fit:cover; border-radius:4px; background:#eee; }
+.thumb { width:96px; height:72px; object-fit:cover; border-radius:4px; background:#eee; }
 .thumb.ph, .card-ph { display:grid; place-items:center; }
+.upload-preview { margin:0; display:grid; gap:.25rem; }
+.upload-preview[hidden] { display:none; }
+.upload-preview img { display:block; width:100%; max-width:28rem; max-height:60vh; object-fit:contain; background:#f0ebe3; border:1px solid var(--line); border-radius:8px; }
 .card-ph { aspect-ratio:4/3; background:#f0ebe3; font-size:2.5rem; }
 .badge { font-size:.75rem; padding:.1rem .5rem; border-radius:99px; background:#eee; margin-left:.5rem; }
 .badge.published { background:#e8f5e9; color:#1b5e20; }

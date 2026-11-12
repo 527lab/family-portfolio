@@ -322,6 +322,21 @@ describe('創作者上傳與權限', () => {
     expect(page).not.toContain('og:image');
   });
 
+  it('上傳照片預覽放大：編輯頁顯示大預覽並可點看大圖；選檔預覽腳本可載入且符合 CSP', async () => {
+    const w = works.listForStudio(auth.getUserByName('alice')!).find((x) => x.imageFile)!;
+    const html = await (await alice.req(`/studio/works/${w.id}/`)).text();
+    expect(html).toContain('class="upload-preview"');
+    expect(html).toContain(`href="/media/images/${w.imageFile}"`);
+    expect(html).toMatch(/<figure class="upload-preview" id="image-preview" hidden/);
+    expect(html).toContain('data-preview="image-preview"');
+    expect(html).toContain('<script src="/upload-preview.js" defer></script>');
+    const js = await alice.req('/upload-preview.js');
+    expect(js.status).toBe(200);
+    expect(js.headers.get('content-type')).toMatch(/javascript/);
+    // 新增頁也有選檔預覽
+    expect(await (await alice.req('/studio/new/')).text()).toContain('id="image-preview"');
+  });
+
   it('創作者不能進帳號管理頁，管理員可以', async () => {
     expect((await alice.req('/studio/admin/')).status).toBe(403);
     expect((await boss.req('/studio/admin/')).status).toBe(200);
