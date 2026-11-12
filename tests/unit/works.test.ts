@@ -75,11 +75,26 @@ describe('公開／草稿', () => {
     expect(listPublic().map((w) => w.title)).toEqual(['公開']);
   });
 
-  it('沒有圖片不能公開；鋼琴要有影片或 YouTube 才能公開', () => {
+  it('沒有圖片不能公開（畫作、攝影、證書）', () => {
     expect(() => createWork(alice, input({ status: 'published' }), {})).toThrow(ValidationError);
-    expect(() => createWork(alice, input({ category: 'piano', status: 'published' }), img)).toThrow(ValidationError);
-    const w = createWork(alice, input({ category: 'piano', status: 'published', videoMode: 'youtube', youtubeId: 'abcdEFGhijk' }), {});
-    expect(w.youtubeId).toBe('abcdEFGhijk');
+    expect(() => createWork(alice, input({ category: 'photography', status: 'published' }), {})).toThrow(ValidationError);
+    expect(() => createWork(alice, input({ category: 'certificate', status: 'published' }), {})).toThrow(ValidationError);
+  });
+
+  it('鋼琴演奏公開時不必有影片（與草稿相同）', () => {
+    const noVideo = createWork(alice, input({ title: '沒影片有封面', category: 'piano', status: 'published' }), img);
+    expect(noVideo.status).toBe('published');
+    expect(noVideo.videoFile).toBeNull();
+    expect(noVideo.youtubeId).toBeNull();
+    const bare = createWork(alice, input({ title: '沒影片也沒圖', category: 'piano', status: 'published' }), {});
+    expect(bare.status).toBe('published');
+    expect(listPublic({ categories: ['piano'] }).map((w) => w.title).sort()).toEqual(['沒影片也沒圖', '沒影片有封面'].sort());
+    const yt = createWork(alice, input({ category: 'piano', status: 'published', videoMode: 'youtube', youtubeId: 'abcdEFGhijk' }), {});
+    expect(yt.youtubeId).toBe('abcdEFGhijk');
+  });
+
+  it('鋼琴演奏有圖片時，公開仍須填圖片文字說明', () => {
+    expect(() => createWork(alice, input({ category: 'piano', status: 'published', alt: '' }), img)).toThrow(ValidationError);
   });
 
   it('公開時必須有圖片文字說明', () => {

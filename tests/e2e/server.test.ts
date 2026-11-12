@@ -337,6 +337,21 @@ describe('創作者上傳與權限', () => {
     expect(edit).not.toMatch(/<input[^>]*value="none"[^>]*checked/);
   });
 
+  it('鋼琴演奏不放影片也能公開，公開頁看得到', async () => {
+    const res = await alice.post('/studio/new/', {
+      category: 'piano', title: '沒有影片的公開演奏', date: '2025-06-04', status: 'published', video_mode: 'none',
+    });
+    expect(res.status).toBe(303);
+    const w = works.listPublic({ categories: ['piano'] }).find((x) => x.title === '沒有影片的公開演奏')!;
+    expect(w.status).toBe('published');
+    expect(w.videoFile).toBeNull();
+    expect(w.youtubeId).toBeNull();
+    expect(await (await fetch(`${base}/piano/`)).text()).toContain('沒有影片的公開演奏');
+    const page = await fetch(`${base}/works/${w.id}/`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).not.toContain('<video');
+  });
+
   it('創作者不能進帳號管理頁，管理員可以', async () => {
     expect((await alice.req('/studio/admin/')).status).toBe(403);
     expect((await boss.req('/studio/admin/')).status).toBe(200);
