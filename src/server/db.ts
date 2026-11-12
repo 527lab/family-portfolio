@@ -54,6 +54,12 @@ CREATE TABLE IF NOT EXISTS works (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+-- 創作者的「關於我」（新增的獨立表，舊資料庫啟動時自動建立，不需搬移資料）
+CREATE TABLE IF NOT EXISTS profiles (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  about TEXT NOT NULL DEFAULT '',
+  updated_at INTEGER NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_works_public ON works (status, category, sort_order);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions (user_id);
 `;

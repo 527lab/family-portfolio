@@ -43,7 +43,7 @@ button.link { background:none; color:var(--accent); padding:0; text-decoration:u
 .notice { background:#fff4d6; padding:.5rem 1rem; border-radius:6px; }
 .hint, small { color:var(--muted); font-size:.9rem; }
 .studio-list { list-style:none; padding:0; display:grid; gap:.5rem; }
-.studio-list li { display:flex; align-items:center; gap:.75rem; border:1px solid var(--line); border-radius:8px; padding:.5rem; background:#fff; }
+.studio-list li { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; border:1px solid var(--line); border-radius:8px; padding:.5rem; background:#fff; }
 .grow { flex:1; }
 .thumb { width:96px; height:72px; object-fit:cover; border-radius:4px; background:#eee; }
 .thumb.ph, .card-ph { display:grid; place-items:center; }
