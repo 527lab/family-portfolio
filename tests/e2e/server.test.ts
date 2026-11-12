@@ -322,6 +322,21 @@ describe('創作者上傳與權限', () => {
     expect(page).not.toContain('og:image');
   });
 
+  it('影片預設「不放影片」：新作品頁預設選取，不選影片可直接儲存', async () => {
+    const html = await (await alice.req('/studio/new/')).text();
+    expect(html).toMatch(/<input[^>]*value="none"[^>]*checked/);
+    expect(html).not.toMatch(/<input[^>]*value="file"[^>]*checked/);
+    const res = await alice.post('/studio/new/', await workBody({ title: '沒有影片的演奏草稿', category: 'piano', status: 'draft', video_mode: 'none' }));
+    expect(res.status).toBe(303);
+    const w = works.listForStudio(auth.getUserByName('alice')!).find((x) => x.title === '沒有影片的演奏草稿')!;
+    expect(w.videoFile).toBeNull();
+    // 已有影片的作品編輯時預設保留原設定（不會被改成不放影片）
+    const yt = works.listForStudio(auth.getUserByName('alice')!).find((x) => x.youtubeId)!;
+    const edit = await (await alice.req(`/studio/works/${yt.id}/`)).text();
+    expect(edit).toMatch(/<input[^>]*value="youtube"[^>]*checked/);
+    expect(edit).not.toMatch(/<input[^>]*value="none"[^>]*checked/);
+  });
+
   it('創作者不能進帳號管理頁，管理員可以', async () => {
     expect((await alice.req('/studio/admin/')).status).toBe(403);
     expect((await boss.req('/studio/admin/')).status).toBe(200);

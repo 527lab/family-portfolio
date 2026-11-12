@@ -7,7 +7,7 @@ import {
   parseWorkForm, updateWork, ValidationError, type WorkInput,
 } from '../../src/server/works.ts';
 import { submitWork } from '../../src/server/workForm.ts';
-import { pngFile } from '../helpers';
+import { mp4Bytes, pngFile } from '../helpers';
 
 let tmp: ReturnType<typeof makeDataDir>;
 let admin: User, alice: User, bob: User;
@@ -148,5 +148,36 @@ describe('submitWork（表單＋檔案整合）', () => {
     expect(r.work).toBeUndefined();
     expect(r.errors.length).toBeGreaterThan(0);
     expect(listForStudio(admin)).toHaveLength(0);
+  });
+});
+
+describe('影片預設「不放影片」', () => {
+  const piano = (o: Record<string, string | File> = {}) => {
+    const f = new FormData();
+    Object.entries({ category: 'piano', title: '練習曲', date: '2025-05-01', status: 'draft', video_mode: 'none', ...o }).forEach(([k, v]) => f.set(k, v));
+    return f;
+  };
+  const mp4 = () => new File([mp4Bytes()], 'a.mp4', { type: 'video/mp4' });
+
+  it('新作品不選影片可直接儲存，不會被要求填影片', async () => {
+    const r = await submitWork(alice, piano());
+    expect(r.errors).toEqual([]);
+    expect(r.work?.videoFile).toBeNull();
+    expect(r.work?.youtubeId).toBeNull();
+  });
+
+  it('沒切換選項但選了影片檔或貼了連結：照實際填的上傳／使用', async () => {
+    const a = await submitWork(alice, piano({ video: mp4() }));
+    expect(a.work?.videoFile).toMatch(/\.mp4$/);
+    const b = await submitWork(alice, piano({ youtube: 'https://youtu.be/abcdEFGhijk' }));
+    expect(b.work?.youtubeId).toBe('abcdEFGhijk');
+  });
+
+  it('已有影片的作品：保留原設定；明確選「不放影片」才移除', async () => {
+    const w = (await submitWork(alice, piano({ video_mode: 'youtube', youtube: 'https://youtu.be/abcdEFGhijk' }))).work!;
+    const kept = await submitWork(alice, piano({ video_mode: 'keep', title: '改名' }), w);
+    expect(kept.work?.youtubeId).toBe('abcdEFGhijk');
+    const removed = await submitWork(alice, piano({ youtube: 'https://youtu.be/abcdEFGhijk' }), kept.work!);
+    expect(removed.work?.youtubeId).toBeNull();
   });
 });
