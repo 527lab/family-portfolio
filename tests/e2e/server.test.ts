@@ -322,6 +322,14 @@ describe('創作者上傳與權限', () => {
     expect(page).not.toContain('og:image');
   });
 
+  it('上傳圖片欄位：accept="image/*" 且不加 capture（手機可從相簿或相機選取）', async () => {
+    const html = await (await alice.req('/studio/new/')).text();
+    const input = html.match(/<input[^>]*name="image"[^>]*>/)?.[0] ?? '';
+    expect(input).toContain('type="file"');
+    expect(input).toContain('accept="image/*"');
+    expect(input).not.toContain('capture');
+  });
+
   it('創作者不能進帳號管理頁，管理員可以', async () => {
     expect((await alice.req('/studio/admin/')).status).toBe(403);
     expect((await boss.req('/studio/admin/')).status).toBe(200);

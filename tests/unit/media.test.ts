@@ -43,6 +43,15 @@ describe('圖片上傳', () => {
     }
   });
 
+  it('手機相簿的 HEIC 照片：拒絕並提示改用 JPG；真正的 JPG/PNG 不受副檔名影響', async () => {
+    for (const [name, type] of [['IMG_1.HEIC', 'image/heic'], ['a.heif', 'image/heif'], ['IMG_2.heic', ''], ['IMG_3.HEIC', 'application/octet-stream']]) {
+      await expect(saveImage(new File(['x'], name, { type }))).rejects.toThrow(/HEIC/);
+    }
+    // 類型正確時以內容為準（iOS 轉成 JPG 後檔名仍可能是 .heic）
+    const png = new File([new Uint8Array(await pngBuffer(40, 30))], 'IMG_4.heic', { type: 'image/png' });
+    expect((await saveImage(png)).image).toMatch(/\.webp$/);
+  });
+
   it('拒絕「宣稱是 PNG 但內容不是圖片」的檔案，且不留下檔案', async () => {
     await expect(saveImage(new File(['<?php system($_GET[1]); ?>'], 'shell.png', { type: 'image/png' }))).rejects.toThrow(UploadError);
     expect(existsSync(tmp.dir + '/uploads/images') ? readdirSync(tmp.dir + '/uploads/images') : []).toEqual([]);
