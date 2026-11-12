@@ -23,10 +23,20 @@ const today = new Date().toISOString().slice(0, 10);
 
   <fieldset>
     <legend>圖片（JPG／PNG／WebP，會自動縮圖並移除 EXIF）</legend>
-    {work?.thumbFile && <p><img class="thumb" src={`/media/thumbs/${work.thumbFile}`} alt={work.alt} /><br /><small>已有圖片；選新檔案會取代它。</small></p>}
+    {work?.thumbFile && (
+      <figure class="upload-preview">
+        <a href={`/media/images/${work.imageFile ?? work.thumbFile}`} target="_blank" rel="noopener"><img src={`/media/thumbs/${work.thumbFile}`} alt={work.alt || '目前的圖片'} /></a>
+        <figcaption><small>目前的圖片（點圖可看大圖）；選新檔案會取代它。</small></figcaption>
+      </figure>
+    )}
     <!-- accept="image/*"（不加 capture）：手機會出現「相簿／拍照／檔案」選單；只列特定格式時部分 Android 只開檔案總管 -->
-    <label>選擇圖片（畫作、攝影、證書必填；鋼琴可當影片封面）<input type="file" name="image" accept="image/*" /></label>
+    <label>選擇圖片（畫作、攝影、證書必填；鋼琴可當影片封面）<input type="file" name="image" accept="image/*" data-preview="image-preview" /></label>
     <p class="hint">手機點「選擇圖片」可直接從相簿挑選或現場拍照。</p>
+    <!-- 選檔後的預覽由 /upload-preview.js 顯示（沒有 JS 時表單照常運作） -->
+    <figure class="upload-preview" id="image-preview" hidden>
+      <img alt="剛選取的圖片預覽" />
+      <figcaption><small>剛選的圖片（按「儲存」後才會上傳）</small></figcaption>
+    </figure>
     <label>圖片文字說明（給視障者與圖片載入失敗時使用）<input name="alt" value={v('alt', work?.alt)} maxlength="120" /></label>
     <p class="hint">證書請先遮蔽姓名、證號、校名等個資再上傳。</p>
   </fieldset>
@@ -63,3 +73,4 @@ const today = new Date().toISOString().slice(0, 10);
   <label class="inline"><input type="checkbox" name="featured" checked={values.featured ? values.featured === 'on' : work?.featured} /> 精選（在後台與作品頁置頂，並顯示在首頁）</label>
   <button type="submit">儲存</button>
 </form>
+<script is:inline src="/upload-preview.js" defer></script>
